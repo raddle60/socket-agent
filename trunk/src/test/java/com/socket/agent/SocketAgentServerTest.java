@@ -25,8 +25,8 @@ public class SocketAgentServerTest {
     public void testStart() throws InterruptedException, UnknownHostException, IOException {
         Properties properties = new Properties();
         properties.setProperty("local.port", "9000");
-        properties.setProperty("remote.ip", "127.0.0.1");
-        properties.setProperty("remote.port", "9001");
+        properties.setProperty("dest.ip", "127.0.0.1");
+        properties.setProperty("dest.port", "9001");
         SocketAgentServer server = new SocketAgentServer(properties);
         server.start();
         new Thread() {
