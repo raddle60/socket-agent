@@ -14,15 +14,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Hello world!
- *
  */
 public class SocketAgentServer {
+
     private final static Logger logger = LoggerFactory.getLogger(SocketAgentServer.class);
     private boolean started = false;
     private Properties properties;
     private Thread thread;
 
-    public SocketAgentServer(Properties properties) {
+    public SocketAgentServer(Properties properties){
         this.properties = properties;
     }
 
@@ -62,89 +62,74 @@ public class SocketAgentServer {
                         int count = 0;
                         ByteArrayOutputStream output = new ByteArrayOutputStream();
                         logger.debug(accepted + ", starting received data ");
+                        int srcSoTimeout = Integer.parseInt(properties.getProperty("src.so.timeout", "1000"));
+                        int srcEndSoTimeout = Integer.parseInt(properties.getProperty("src.end.so.timeout", "10"));
                         try {
-                            socket.setSoTimeout(200);
+                            socket.setSoTimeout(srcSoTimeout);
                             InputStream input = socket.getInputStream();
                             byte[] buffer = new byte[1024 * 32];
                             int n = 0;
-                            // wating data received
-                            Thread.sleep(50);
                             while (-1 != (n = input.read(buffer))) {
                                 output.write(buffer, 0, n);
                                 count += n;
-                                // wating data received
-                                Thread.sleep(20);
+                                socket.setSoTimeout(srcEndSoTimeout);
                             }
                         } catch (SocketTimeoutException e) {
                             // ignore time out
                         } catch (IOException e) {
                             logger.error(accepted + ", receive failed", e);
                             continue;
-                        } catch (InterruptedException e) {
-                            logger.error(accepted + ", receive interrupted", e);
-                            continue;
                         }
                         logger.debug(accepted + ", received data size : " + count);
-                        logger.debug(accepted + ", received data base64 : \n"
-                                + Base64.encodeBase64URLSafeString(output.toByteArray()));
+                        logger.debug(accepted + ", received data base64 : \n" + Base64.encodeBase64URLSafeString(output.toByteArray()));
                         logger.debug(accepted + ", received data : \n" + new String(output.toByteArray()));
                         if (count != output.size()) {
                             logger.error(accepted + ", receive excepted " + count + " but " + output.size());
                             continue;
                         }
-                        int removtePort = Integer.parseInt(properties.getProperty("remote.port"));
-                        int removteSoTimeout = Integer.parseInt(properties.getProperty("remote.so.timeout", "10000"));
+                        int destPort = Integer.parseInt(properties.getProperty("dest.port"));
                         String removteIp = properties.getProperty("remote.ip");
-                        logger.debug(accepted + ", starting connect to " + removteIp + ":" + removtePort);
+                        logger.debug(accepted + ", starting connect to " + removteIp + ":" + destPort);
                         try {
-                            forwardSocket = new Socket(removteIp, removtePort);
-                            forwardSocket.setSoTimeout(removteSoTimeout);
+                            forwardSocket = new Socket(removteIp, destPort);
                         } catch (Exception e) {
-                            logger.error(accepted + ", connect to " + removteIp + ":" + removtePort + " failed", e);
+                            logger.error(accepted + ", connect to " + removteIp + ":" + destPort + " failed", e);
                             continue;
                         }
-                        logger.debug(accepted + ", send data to " + removteIp + ":" + removtePort);
+                        logger.debug(accepted + ", send data to " + removteIp + ":" + destPort);
                         try {
                             forwardSocket.getOutputStream().write(output.toByteArray());
                             forwardSocket.getOutputStream().flush();
                         } catch (IOException e) {
-                            logger.error(accepted + ", send to " + removteIp + ":" + removtePort + " failed", e);
+                            logger.error(accepted + ", send to " + removteIp + ":" + destPort + " failed", e);
                             continue;
                         }
                         int remoteCount = 0;
                         ByteArrayOutputStream remoteOutput = new ByteArrayOutputStream();
                         logger.debug(accepted + ", starting received data from remote");
+                        int destSoTimeout = Integer.parseInt(properties.getProperty("dest.so.timeout", "15000"));
+                        int destEndSoTimeout = Integer.parseInt(properties.getProperty("dest.end.so.timeout", "10"));
                         try {
+                            forwardSocket.setSoTimeout(destSoTimeout);
                             InputStream input = forwardSocket.getInputStream();
                             byte[] buffer = new byte[1024 * 32];
                             int n = 0;
-                            // wating data received
-                            Thread.sleep(200);
                             while (-1 != (n = input.read(buffer))) {
                                 remoteOutput.write(buffer, 0, n);
                                 remoteCount += n;
-                                // wating data received
-                                Thread.sleep(20);
-                                // wating short time
-                                forwardSocket.setSoTimeout(100);
+                                forwardSocket.setSoTimeout(destEndSoTimeout);
                             }
                         } catch (SocketTimeoutException e) {
                             // ignore time out
                         } catch (IOException e) {
                             logger.error(accepted + ", receive from remote failed", e);
                             continue;
-                        } catch (InterruptedException e) {
-                            logger.error(accepted + ", receive from remote interrupted", e);
-                            continue;
                         }
                         logger.debug(accepted + ", received from remote data size : " + remoteCount);
-                        logger.debug(accepted + ", received from remote data base64 : \n"
-                                + Base64.encodeBase64URLSafeString(output.toByteArray()));
-                        logger.debug(accepted + ", received from remote data : \n"
-                                + new String(remoteOutput.toByteArray()));
+                        logger.debug(accepted + ", received from remote data base64 : \n" + Base64.encodeBase64URLSafeString(output.toByteArray()));
+                        logger.debug(accepted + ", received from remote data : \n" + new String(remoteOutput.toByteArray()));
                         if (remoteCount != remoteOutput.size()) {
-                            logger.error(accepted + ", receive from remote excepted " + remoteCount + " but "
-                                    + remoteOutput.size());
+                            logger.error(accepted + ", receive from remote excepted " + remoteCount + " but " + remoteOutput.size());
                             continue;
                         }
                         logger.debug(accepted + ", send data back");
