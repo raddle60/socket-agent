@@ -58,7 +58,7 @@ public class SocketAgentServerTest {
         }.start();
         for (int i = 0; i < 100; i++) {
             Socket socket = new Socket("127.0.0.1", 9000);
-            byte[] bytes = RandomStringUtils.random(RandomUtils.nextInt(10000)).getBytes();
+            byte[] bytes = RandomStringUtils.random(RandomUtils.nextInt(100000)).getBytes();
             socket.getOutputStream().write(bytes);
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             IOUtils.copy(socket.getInputStream(), output);
