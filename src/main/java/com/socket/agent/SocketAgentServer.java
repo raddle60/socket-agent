@@ -161,9 +161,11 @@ public class SocketAgentServer {
             } finally {
                 if (socket != null) {
                     closeQuietly(socket);
+                    logger.debug("close socket " + socket.getRemoteSocketAddress());
                 }
                 if (forwardSocket != null) {
                     closeQuietly(forwardSocket);
+                    logger.debug("close socket " + forwardSocket.getRemoteSocketAddress());
                 }
             }
         }
