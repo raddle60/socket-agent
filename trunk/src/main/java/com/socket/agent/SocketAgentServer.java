@@ -145,7 +145,7 @@ public class SocketAgentServer {
                 }
                 logger.debug(accepted + ", received data from dest size : " + remoteCount);
                 logger.debug(accepted + ", received data from dest  base64 : \n"
-                        + Base64.encodeBase64URLSafeString(output.toByteArray()));
+                        + Base64.encodeBase64URLSafeString(remoteOutput.toByteArray()));
                 logger.debug(accepted + ", received data from dest  : \n" + new String(remoteOutput.toByteArray()));
                 if (remoteCount != remoteOutput.size()) {
                     logger.error(accepted + ", receive data from dest failed, excepted " + remoteCount + " but "
