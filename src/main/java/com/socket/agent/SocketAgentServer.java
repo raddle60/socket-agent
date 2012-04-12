@@ -104,20 +104,20 @@ public class SocketAgentServer {
                     return;
                 }
                 int destPort = Integer.parseInt(properties.getProperty("dest.port"));
-                String removteIp = properties.getProperty("remote.ip");
-                logger.debug(accepted + ", starting connect to dest " + removteIp + ":" + destPort);
+                String destIp = properties.getProperty("dest.ip");
+                logger.debug(accepted + ", starting connect to dest " + destIp + ":" + destPort);
                 try {
-                    forwardSocket = new Socket(removteIp, destPort);
+                    forwardSocket = new Socket(destIp, destPort);
                 } catch (Exception e) {
-                    logger.error(accepted + ", connect to dest " + removteIp + ":" + destPort + " failed", e);
+                    logger.error(accepted + ", connect to dest " + destIp + ":" + destPort + " failed", e);
                     return;
                 }
-                logger.debug(accepted + ", send data to dest " + removteIp + ":" + destPort);
+                logger.debug(accepted + ", send data to dest " + destIp + ":" + destPort);
                 try {
                     forwardSocket.getOutputStream().write(output.toByteArray());
                     forwardSocket.getOutputStream().flush();
                 } catch (IOException e) {
-                    logger.error(accepted + ", send data to dest " + removteIp + ":" + destPort + " failed", e);
+                    logger.error(accepted + ", send data to dest " + destIp + ":" + destPort + " failed", e);
                     return;
                 }
                 int remoteCount = 0;
