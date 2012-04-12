@@ -42,7 +42,9 @@ public class SocketAgentServer {
                     try {
                         int port = Integer.parseInt(properties.getProperty("local.port"));
                         server = new ServerSocket(port);
-                        logger.info("socket agent listening on " + port);
+                        int destPort = Integer.parseInt(properties.getProperty("dest.port"));
+                        String destIp = properties.getProperty("dest.ip");
+                        logger.info("socket agent listening on " + port + " agent for " + destIp + ":" + destPort);
                     } catch (IOException e) {
                         logger.error("starting socket agent failed", e);
                     }
