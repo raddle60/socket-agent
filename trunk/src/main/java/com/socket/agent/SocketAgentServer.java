@@ -26,7 +26,7 @@ public class SocketAgentServer {
     private boolean started = false;
     private Properties properties;
     private Thread thread;
-    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 50, 10L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
+    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(0, 50, 10L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
 
     public SocketAgentServer(Properties properties){
         this.properties = properties;
@@ -58,7 +58,11 @@ public class SocketAgentServer {
                             logger.error("accept socket failed", e);
                             continue;
                         }
-                        threadPoolExecutor.execute(new AgentTask(socket));
+                        try {
+                            threadPoolExecutor.execute(new AgentTask(socket));
+                        } catch (Exception e) {
+                            logger.error(e.getMessage());
+                        }
                     }
                 }
             });
