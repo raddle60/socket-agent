@@ -63,7 +63,7 @@ public class SocketAgentServerTest {
             }
 
         }.start();
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 100; i++) {
             Socket socket = new Socket("127.0.0.1", 9000);
             logger.debug("connected to " + socket.getRemoteSocketAddress());
             byte[] bytes = RandomStringUtils.random(RandomUtils.nextInt(10000)).getBytes();
