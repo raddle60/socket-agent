@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Properties;
 import java.util.concurrent.SynchronousQueue;
@@ -147,6 +148,8 @@ public class SocketAgentServer {
                             closeQuietly(sourceSocket);
                         }
                     } catch (SocketTimeoutException e) {
+                    } catch (SocketException e) {
+                        logger.error("receive data from " + accepted + " failed");
                     }
                     // 发送给目标socket
                     if (count > 0) {
@@ -179,7 +182,7 @@ public class SocketAgentServer {
                     }
                 }
             } catch (IOException e) {
-                logger.error("receive data from " + accepted + " failed", e);
+                logger.error("transfer data from " + sourceSocket.getRemoteSocketAddress() + " to " + targetSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
                 return;
             } finally {
                 closeSocket();
