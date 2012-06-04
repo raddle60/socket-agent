@@ -39,13 +39,13 @@ public class SocketAgentServerTest {
                         Socket socket = server.accept();
                         logger.debug("accept " + socket.getRemoteSocketAddress() + "");
                         ByteArrayOutputStream output = new ByteArrayOutputStream();
-                        logger.debug("receiving " + socket.getRemoteSocketAddress() + "");
-                        socket.setSoTimeout(10);
+                        logger.debug("accept " + socket.getRemoteSocketAddress() + "");
+                        socket.setSoTimeout(10000);
                         try {
                             IOUtils.copy(socket.getInputStream(), output);
                         } catch (Exception e) {
                         }
-                        logger.debug("received " + output.size() + "");
+                        logger.debug("received from " + socket.getRemoteSocketAddress() + output.size() + "");
                         socket.getOutputStream().write(DigestUtils.md5(output.toByteArray()));
                         socket.getOutputStream().flush();
                         socket.close();
@@ -56,10 +56,14 @@ public class SocketAgentServerTest {
             }
 
         }.start();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1; i++) {
             Socket socket = new Socket("127.0.0.1", 9000);
-            byte[] bytes = RandomStringUtils.random(RandomUtils.nextInt(100000)).getBytes();
+            logger.debug("connected to " + socket.getRemoteSocketAddress());
+            byte[] bytes = RandomStringUtils.random(RandomUtils.nextInt(10000)).getBytes();
+            logger.debug("writing to " + socket.getRemoteSocketAddress());
             socket.getOutputStream().write(bytes);
+            socket.getOutputStream().flush();
+            logger.debug("writed to " + socket.getRemoteSocketAddress());
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             IOUtils.copy(socket.getInputStream(), output);
             socket.close();
