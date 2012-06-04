@@ -2,8 +2,10 @@ package com.socket.agent;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -38,14 +40,19 @@ public class SocketAgentServerTest {
                     while (true) {
                         Socket socket = server.accept();
                         logger.debug("accept " + socket.getRemoteSocketAddress() + "");
+                        socket.setSoTimeout(1000);
+                        byte[] buffer = new byte[1024 * 32];
+                        int n = 0;
                         ByteArrayOutputStream output = new ByteArrayOutputStream();
-                        logger.debug("accept " + socket.getRemoteSocketAddress() + "");
-                        socket.setSoTimeout(10000);
+                        InputStream input = socket.getInputStream();
                         try {
-                            IOUtils.copy(socket.getInputStream(), output);
-                        } catch (Exception e) {
+                            while (0 < (n = input.read(buffer))) {
+                                output.write(buffer, 0, n);
+                                socket.setSoTimeout(10);
+                            }
+                        } catch (SocketTimeoutException e) {
                         }
-                        logger.debug("received from " + socket.getRemoteSocketAddress() + output.size() + "");
+                        logger.debug("received from " + socket.getRemoteSocketAddress() + " , " + output.size() + "");
                         socket.getOutputStream().write(DigestUtils.md5(output.toByteArray()));
                         socket.getOutputStream().flush();
                         socket.close();
@@ -62,7 +69,7 @@ public class SocketAgentServerTest {
             byte[] bytes = RandomStringUtils.random(RandomUtils.nextInt(10000)).getBytes();
             logger.debug("writing to " + socket.getRemoteSocketAddress());
             socket.getOutputStream().write(bytes);
-            socket.getOutputStream().flush();
+            //            socket.getOutputStream().flush();
             logger.debug("writed to " + socket.getRemoteSocketAddress());
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             IOUtils.copy(socket.getInputStream(), output);
