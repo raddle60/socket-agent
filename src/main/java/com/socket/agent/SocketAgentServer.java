@@ -87,8 +87,8 @@ public class SocketAgentServer {
                 }
                 return;
             }
-            TransferData sourceTransferData = new TransferData(socket, forwardSocket);
-            TransferData destTransferData = new TransferData(forwardSocket, socket);
+            TransferData sourceTransferData = new TransferData(socket, forwardSocket, true);
+            TransferData destTransferData = new TransferData(forwardSocket, socket, false);
             sourceTransferData.related = destTransferData;
             destTransferData.related = sourceTransferData;
             sourceTransferData.start();
@@ -110,10 +110,12 @@ public class SocketAgentServer {
         private Socket targetSocket;
         private boolean toClose = false;
         private TransferData related;
+        private boolean srcToDest;
 
-        public TransferData(Socket sourceSocket, Socket targetSocket){
+        public TransferData(Socket sourceSocket, Socket targetSocket, boolean srcToDest){
             this.sourceSocket = sourceSocket;
             this.targetSocket = targetSocket;
+            this.srcToDest = srcToDest;
         }
 
         @Override
@@ -139,8 +141,11 @@ public class SocketAgentServer {
                             count += n;
                             sourceSocket.setSoTimeout(srcCheckSoTimeout);
                         }
-                        toClose = true;
-                        closeQuietly(sourceSocket);
+                        if (!srcToDest) {
+                            // 从目标接受到结束，说明接收结束，需要关闭socket
+                            toClose = true;
+                            closeQuietly(sourceSocket);
+                        }
                     } catch (SocketTimeoutException e) {
                     }
                     // 发送给目标socket
@@ -159,6 +164,7 @@ public class SocketAgentServer {
                                 targetSocket.getOutputStream().flush();
                                 logger.debug("sent data to " + targetSocket.getRemoteSocketAddress() + " completed");
                                 if (toClose) {
+                                    // 从目标接受到结束，发送完毕，需要关闭socket
                                     closeSocket();
                                 }
                             }
