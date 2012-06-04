@@ -85,7 +85,7 @@ public class SocketAgentServer {
             try {
                 forwardSocket = new Socket();
                 forwardSocket.connect(new InetSocketAddress(destIp, destPort), Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
-                logger.info("connect to dest " + destIp + ":" + destPort);
+                logger.info("connected to dest " + destIp + ":" + destPort);
             } catch (IOException e) {
                 logger.error(socket.getRemoteSocketAddress() + ", connect to dest " + destIp + ":" + destPort + " failed", e);
                 if (socket != null) {
@@ -130,6 +130,7 @@ public class SocketAgentServer {
             int srcTotalTimeout = Integer.parseInt(properties.getProperty("total.timeout", "-1"));
             String accepted = sourceSocket.getRemoteSocketAddress() + "";
             int srcSoTimeout = Integer.parseInt(properties.getProperty("so.timeout", "5000"));
+            int closeSoTimeout = Integer.parseInt(properties.getProperty("close.so.timeout", "10000"));
             int srcCheckSoTimeout = Integer.parseInt(properties.getProperty("check.so.timeout", "10"));
             try {
                 InputStream input = sourceSocket.getInputStream();
@@ -142,7 +143,8 @@ public class SocketAgentServer {
                     try {
                         // 读取配置源socket
                         sourceSocket.setSoTimeout(srcSoTimeout);
-                        if (!srcToDest) {
+                        if (!srcToDest && closeSoTimeout != -1) {
+                            sourceSocket.setSoTimeout(Math.max(srcSoTimeout, closeSoTimeout));
                             try {
                                 if (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
                                     output.write(buffer, 0, n);
@@ -226,8 +228,8 @@ public class SocketAgentServer {
     private void closeQuietly(Socket socket) {
         try {
             if (socket != null && !socket.isClosed()) {
-                logger.info("close socket " + socket.getRemoteSocketAddress());
                 socket.close();
+                logger.info("closed socket " + socket.getRemoteSocketAddress());
             }
         } catch (IOException e1) {
             logger.error(e1.getMessage(), e1);
