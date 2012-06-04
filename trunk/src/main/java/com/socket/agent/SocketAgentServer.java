@@ -149,7 +149,7 @@ public class SocketAgentServer {
                         }
                     } catch (SocketTimeoutException e) {
                     } catch (SocketException e) {
-                        logger.error("receive data from " + accepted + " failed");
+                        // 并发关闭问题，远程已关闭，这里还阻塞在读取，忽略这个错误
                     }
                     // 发送给目标socket
                     if (count > 0) {
