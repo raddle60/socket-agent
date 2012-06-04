@@ -3,6 +3,7 @@ package com.socket.agent;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -52,9 +53,9 @@ public class SocketAgentServer {
                     while (true) {
                         try {
                             socket = server.accept();
-                            logger.debug("accepted src socket :" + socket.getRemoteSocketAddress());
+                            logger.debug("accepted socket :" + socket.getRemoteSocketAddress());
                         } catch (IOException e) {
-                            logger.error("accept src socket failed", e);
+                            logger.error("accept socket failed", e);
                             continue;
                         }
                         threadPoolExecutor.execute(new AgentTask(socket));
@@ -73,102 +74,124 @@ public class SocketAgentServer {
         }
 
         public void run() {
+            int destPort = Integer.parseInt(properties.getProperty("dest.port"));
+            String destIp = properties.getProperty("dest.ip");
             Socket forwardSocket = null;
             try {
-                int count = 0;
-                ByteArrayOutputStream output = new ByteArrayOutputStream();
-                String accepted = socket.getRemoteSocketAddress() + "";
-                logger.debug(accepted + ", starting received data from src ");
-                int srcSoTimeout = Integer.parseInt(properties.getProperty("src.so.timeout", "1000"));
-                int srcEndSoTimeout = Integer.parseInt(properties.getProperty("src.end.so.timeout", "10"));
-                try {
-                    socket.setSoTimeout(srcSoTimeout);
-                    InputStream input = socket.getInputStream();
-                    byte[] buffer = new byte[1024 * 32];
-                    int n = 0;
-                    while (-1 != (n = input.read(buffer))) {
-                        output.write(buffer, 0, n);
-                        count += n;
-                        socket.setSoTimeout(srcEndSoTimeout);
-                    }
-                } catch (SocketTimeoutException e) {
-                    // ignore time out
-                } catch (IOException e) {
-                    logger.error(accepted + ", receive src data failed", e);
-                    return;
-                }
-                logger.debug(accepted + ", received src data size : " + count);
-                logger.debug(accepted + ", received src data base64 : \n"
-                        + Base64.encodeBase64URLSafeString(output.toByteArray()));
-                logger.debug(accepted + ", received src data : \n" + new String(output.toByteArray()));
-                if (count != output.size()) {
-                    logger.error(accepted + ", receive src data failed , excepted " + count + " but " + output.size());
-                    return;
-                }
-                int destPort = Integer.parseInt(properties.getProperty("dest.port"));
-                String destIp = properties.getProperty("dest.ip");
-                logger.debug(accepted + ", starting connect to dest " + destIp + ":" + destPort);
-                try {
-                    forwardSocket = new Socket(destIp, destPort);
-                } catch (Exception e) {
-                    logger.error(accepted + ", connect to dest " + destIp + ":" + destPort + " failed", e);
-                    return;
-                }
-                logger.debug(accepted + ", send data to dest " + destIp + ":" + destPort);
-                try {
-                    forwardSocket.getOutputStream().write(output.toByteArray());
-                    forwardSocket.getOutputStream().flush();
-                } catch (IOException e) {
-                    logger.error(accepted + ", send data to dest " + destIp + ":" + destPort + " failed", e);
-                    return;
-                }
-                int remoteCount = 0;
-                ByteArrayOutputStream remoteOutput = new ByteArrayOutputStream();
-                logger.debug(accepted + ", starting received data from dest");
-                int destSoTimeout = Integer.parseInt(properties.getProperty("dest.so.timeout", "15000"));
-                int destEndSoTimeout = Integer.parseInt(properties.getProperty("dest.end.so.timeout", "10"));
-                try {
-                    forwardSocket.setSoTimeout(destSoTimeout);
-                    InputStream input = forwardSocket.getInputStream();
-                    byte[] buffer = new byte[1024 * 32];
-                    int n = 0;
-                    while (-1 != (n = input.read(buffer))) {
-                        remoteOutput.write(buffer, 0, n);
-                        remoteCount += n;
-                        forwardSocket.setSoTimeout(destEndSoTimeout);
-                    }
-                } catch (SocketTimeoutException e) {
-                    // ignore time out
-                } catch (IOException e) {
-                    logger.error(accepted + ", receive data from dest failed", e);
-                    return;
-                }
-                logger.debug(accepted + ", received data from dest size : " + remoteCount);
-                logger.debug(accepted + ", received data from dest  base64 : \n"
-                        + Base64.encodeBase64URLSafeString(remoteOutput.toByteArray()));
-                logger.debug(accepted + ", received data from dest  : \n" + new String(remoteOutput.toByteArray()));
-                if (remoteCount != remoteOutput.size()) {
-                    logger.error(accepted + ", receive data from dest failed, excepted " + remoteCount + " but "
-                            + remoteOutput.size());
-                    return;
-                }
-                logger.debug(accepted + ", send data back to src");
-                try {
-                    socket.getOutputStream().write(remoteOutput.toByteArray());
-                    socket.getOutputStream().flush();
-                } catch (IOException e) {
-                    logger.error(accepted + ", send data back to src failed", e);
-                    return;
-                }
-            } finally {
+                forwardSocket = new Socket();
+                forwardSocket.connect(new InetSocketAddress(destIp, destPort),
+                        Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
+            } catch (IOException e) {
+                logger.error(socket.getRemoteSocketAddress() + ", connect to dest " + destIp + ":" + destPort
+                        + " failed", e);
                 if (socket != null) {
                     closeQuietly(socket);
                     logger.debug("close socket " + socket.getRemoteSocketAddress());
                 }
-                if (forwardSocket != null) {
-                    closeQuietly(forwardSocket);
-                    logger.debug("close socket " + forwardSocket.getRemoteSocketAddress());
+                return;
+            }
+            TransferData sourceTransferData = new TransferData(socket, forwardSocket);
+            TransferData destTransferData = new TransferData(forwardSocket, socket);
+            sourceTransferData.related = destTransferData;
+            destTransferData.related = sourceTransferData;
+            sourceTransferData.start();
+            destTransferData.start();
+            try {
+                sourceTransferData.join();
+                destTransferData.join();
+            } catch (InterruptedException e) {
+
+            }
+            logger.debug("transfer data from " + socket.getRemoteSocketAddress() + " to "
+                    + forwardSocket.getRemoteSocketAddress() + " complete");
+        }
+
+    }
+
+    private class TransferData extends Thread {
+        private Socket sourceSocket;
+        private Socket targetSocket;
+        private boolean toClose = false;
+        private TransferData related;
+
+        public TransferData(Socket sourceSocket, Socket targetSocket) {
+            this.sourceSocket = sourceSocket;
+            this.targetSocket = targetSocket;
+        }
+
+        @Override
+        public void run() {
+            long start = System.currentTimeMillis();
+            int srcTotalTimeout = Integer.parseInt(properties.getProperty("total.timeout", "-1"));
+            String accepted = sourceSocket.getRemoteSocketAddress() + "";
+            int srcSoTimeout = Integer.parseInt(properties.getProperty("so.timeout", "1000"));
+            int srcCheckSoTimeout = Integer.parseInt(properties.getProperty("check.so.timeout", "10"));
+            try {
+                sourceSocket.setSoTimeout(srcSoTimeout);
+                InputStream input = sourceSocket.getInputStream();
+                logger.debug("wating data from " + accepted);
+                while (!toClose) {
+                    int n = 0;
+                    int count = 0;
+                    byte[] buffer = new byte[1024 * 32];
+                    ByteArrayOutputStream output = new ByteArrayOutputStream();
+                    try {
+                        // 读取配置源socket
+                        while (-1 != (n = input.read(buffer))) {
+                            output.write(buffer, 0, n);
+                            count += n;
+                            sourceSocket.setSoTimeout(srcCheckSoTimeout);
+                        }
+                        toClose = true;
+                        closeQuietly(sourceSocket);
+                    } catch (SocketTimeoutException e) {
+                    }
+                    // 发送给目标socket
+                    if (count > 0) {
+                        logger.debug("received data from " + accepted + " size : " + count);
+                        logger.debug("received data from " + accepted + " base64 : \n"
+                                + Base64.encodeBase64URLSafeString(output.toByteArray()));
+                        logger.debug("received data from " + accepted + " : \n" + new String(output.toByteArray()));
+                        if (count != output.size()) {
+                            logger.error("receive data from " + accepted + " failed , excepted " + count + " but "
+                                    + output.size());
+                            break;
+                        }
+                        logger.debug("sending data to " + targetSocket.getRemoteSocketAddress());
+                        try {
+                            targetSocket.getOutputStream().write(output.toByteArray());
+                            targetSocket.getOutputStream().flush();
+                            if (toClose) {
+                                closeSocket();
+                            }
+                        } catch (IOException e) {
+                            logger.error("sending data to " + targetSocket.getRemoteSocketAddress() + " failed", e);
+                            break;
+                        }
+                    }
+                    if (srcTotalTimeout != -1 && System.currentTimeMillis() - start > srcTotalTimeout) {
+                        logger.warn("waiting timeout " + (System.currentTimeMillis() - start));
+                        break;
+                    }
                 }
+            } catch (IOException e) {
+                logger.error("receive data from " + accepted + " failed", e);
+                return;
+            } finally {
+                closeSocket();
+            }
+        }
+
+        private void closeSocket() {
+            toClose = true;
+            related.toClose = true;
+            if (sourceSocket != null) {
+                closeQuietly(sourceSocket);
+                logger.debug("close socket " + sourceSocket.getRemoteSocketAddress());
+            }
+            if (targetSocket != null) {
+                closeQuietly(targetSocket);
+                logger.debug("close socket " + targetSocket.getRemoteSocketAddress());
             }
         }
 
@@ -178,6 +201,7 @@ public class SocketAgentServer {
         try {
             socket.close();
         } catch (IOException e1) {
+            logger.error(e1.getMessage(), e1);
         }
     }
 }
