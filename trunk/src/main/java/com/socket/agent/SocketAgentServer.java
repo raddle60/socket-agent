@@ -25,10 +25,9 @@ public class SocketAgentServer {
     private boolean started = false;
     private Properties properties;
     private Thread thread;
-    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(0, 50, 60L, TimeUnit.SECONDS,
-            new SynchronousQueue<Runnable>());
+    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(0, 50, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
 
-    public SocketAgentServer(Properties properties) {
+    public SocketAgentServer(Properties properties){
         this.properties = properties;
     }
 
@@ -67,9 +66,10 @@ public class SocketAgentServer {
     }
 
     private class AgentTask implements Runnable {
+
         private Socket socket;
 
-        public AgentTask(Socket socket) {
+        public AgentTask(Socket socket){
             this.socket = socket;
         }
 
@@ -79,14 +79,11 @@ public class SocketAgentServer {
             Socket forwardSocket = null;
             try {
                 forwardSocket = new Socket();
-                forwardSocket.connect(new InetSocketAddress(destIp, destPort),
-                        Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
+                forwardSocket.connect(new InetSocketAddress(destIp, destPort), Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
             } catch (IOException e) {
-                logger.error(socket.getRemoteSocketAddress() + ", connect to dest " + destIp + ":" + destPort
-                        + " failed", e);
+                logger.error(socket.getRemoteSocketAddress() + ", connect to dest " + destIp + ":" + destPort + " failed", e);
                 if (socket != null) {
                     closeQuietly(socket);
-                    logger.debug("close socket " + socket.getRemoteSocketAddress());
                 }
                 return;
             }
@@ -102,19 +99,19 @@ public class SocketAgentServer {
             } catch (InterruptedException e) {
 
             }
-            logger.debug("transfer data from " + socket.getRemoteSocketAddress() + " to "
-                    + forwardSocket.getRemoteSocketAddress() + " complete");
+            logger.debug("transfer data from " + socket.getRemoteSocketAddress() + " to " + forwardSocket.getRemoteSocketAddress() + " complete");
         }
 
     }
 
     private class TransferData extends Thread {
+
         private Socket sourceSocket;
         private Socket targetSocket;
         private boolean toClose = false;
         private TransferData related;
 
-        public TransferData(Socket sourceSocket, Socket targetSocket) {
+        public TransferData(Socket sourceSocket, Socket targetSocket){
             this.sourceSocket = sourceSocket;
             this.targetSocket = targetSocket;
         }
@@ -137,7 +134,7 @@ public class SocketAgentServer {
                     ByteArrayOutputStream output = new ByteArrayOutputStream();
                     try {
                         // 读取配置源socket
-                        while (-1 != (n = input.read(buffer))) {
+                        while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
                             output.write(buffer, 0, n);
                             count += n;
                             sourceSocket.setSoTimeout(srcCheckSoTimeout);
@@ -149,20 +146,21 @@ public class SocketAgentServer {
                     // 发送给目标socket
                     if (count > 0) {
                         logger.debug("received data from " + accepted + " size : " + count);
-                        logger.debug("received data from " + accepted + " base64 : \n"
-                                + Base64.encodeBase64URLSafeString(output.toByteArray()));
+                        logger.debug("received data from " + accepted + " base64 : \n" + Base64.encodeBase64URLSafeString(output.toByteArray()));
                         logger.debug("received data from " + accepted + " : \n" + new String(output.toByteArray()));
                         if (count != output.size()) {
-                            logger.error("receive data from " + accepted + " failed , excepted " + count + " but "
-                                    + output.size());
+                            logger.error("receive data from " + accepted + " failed , excepted " + count + " but " + output.size());
                             break;
                         }
                         logger.debug("sending data to " + targetSocket.getRemoteSocketAddress());
                         try {
-                            targetSocket.getOutputStream().write(output.toByteArray());
-                            targetSocket.getOutputStream().flush();
-                            if (toClose) {
-                                closeSocket();
+                            if (!targetSocket.isClosed()) {
+                                targetSocket.getOutputStream().write(output.toByteArray());
+                                targetSocket.getOutputStream().flush();
+                                logger.debug("sent data to " + targetSocket.getRemoteSocketAddress() + " completed");
+                                if (toClose) {
+                                    closeSocket();
+                                }
                             }
                         } catch (IOException e) {
                             logger.error("sending data to " + targetSocket.getRemoteSocketAddress() + " failed", e);
@@ -187,11 +185,9 @@ public class SocketAgentServer {
             related.toClose = true;
             if (sourceSocket != null) {
                 closeQuietly(sourceSocket);
-                logger.debug("close socket " + sourceSocket.getRemoteSocketAddress());
             }
             if (targetSocket != null) {
                 closeQuietly(targetSocket);
-                logger.debug("close socket " + targetSocket.getRemoteSocketAddress());
             }
         }
 
@@ -199,7 +195,10 @@ public class SocketAgentServer {
 
     private void closeQuietly(Socket socket) {
         try {
-            socket.close();
+            if (socket != null && !socket.isClosed()) {
+                logger.debug("close socket " + socket.getRemoteSocketAddress());
+                socket.close();
+            }
         } catch (IOException e1) {
             logger.error(e1.getMessage(), e1);
         }
