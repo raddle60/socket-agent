@@ -26,7 +26,7 @@ public class SocketAgentServer {
     private boolean started = false;
     private Properties properties;
     private Thread thread;
-    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(0, 50, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
+    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 50, 10L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
 
     public SocketAgentServer(Properties properties){
         this.properties = properties;
@@ -53,7 +53,7 @@ public class SocketAgentServer {
                     while (true) {
                         try {
                             socket = server.accept();
-                            logger.debug("accepted socket :" + socket.getRemoteSocketAddress());
+                            logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                         } catch (IOException e) {
                             logger.error("accept socket failed", e);
                             continue;
@@ -81,6 +81,7 @@ public class SocketAgentServer {
             try {
                 forwardSocket = new Socket();
                 forwardSocket.connect(new InetSocketAddress(destIp, destPort), Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
+                logger.info("connect to dest " + destIp + ":" + destPort);
             } catch (IOException e) {
                 logger.error(socket.getRemoteSocketAddress() + ", connect to dest " + destIp + ":" + destPort + " failed", e);
                 if (socket != null) {
@@ -124,7 +125,7 @@ public class SocketAgentServer {
             long start = System.currentTimeMillis();
             int srcTotalTimeout = Integer.parseInt(properties.getProperty("total.timeout", "-1"));
             String accepted = sourceSocket.getRemoteSocketAddress() + "";
-            int srcSoTimeout = Integer.parseInt(properties.getProperty("so.timeout", "1000"));
+            int srcSoTimeout = Integer.parseInt(properties.getProperty("so.timeout", "5000"));
             int srcCheckSoTimeout = Integer.parseInt(properties.getProperty("check.so.timeout", "10"));
             try {
                 InputStream input = sourceSocket.getInputStream();
@@ -137,6 +138,19 @@ public class SocketAgentServer {
                     try {
                         // 读取配置源socket
                         sourceSocket.setSoTimeout(srcSoTimeout);
+                        if (!srcToDest) {
+                            try {
+                                if (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
+                                    output.write(buffer, 0, n);
+                                    count += n;
+                                    sourceSocket.setSoTimeout(srcCheckSoTimeout);
+                                }
+                            } catch (SocketTimeoutException e) {
+                                // 从目标长时间无响应
+                                logger.trace(e.getMessage());
+                                break;
+                            }
+                        }
                         while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
                             output.write(buffer, 0, n);
                             count += n;
@@ -148,8 +162,11 @@ public class SocketAgentServer {
                             closeQuietly(sourceSocket);
                         }
                     } catch (SocketTimeoutException e) {
+                        logger.trace(e.getMessage());
                     } catch (SocketException e) {
                         // 并发关闭问题，远程已关闭，这里还阻塞在读取，忽略这个错误
+                        logger.trace(e.getMessage());
+                        closeQuietly(sourceSocket);
                     }
                     // 发送给目标socket
                     if (count > 0) {
@@ -205,7 +222,7 @@ public class SocketAgentServer {
     private void closeQuietly(Socket socket) {
         try {
             if (socket != null && !socket.isClosed()) {
-                logger.debug("close socket " + socket.getRemoteSocketAddress());
+                logger.info("close socket " + socket.getRemoteSocketAddress());
                 socket.close();
             }
         } catch (IOException e1) {
