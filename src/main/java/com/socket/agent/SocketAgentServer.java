@@ -126,7 +126,6 @@ public class SocketAgentServer {
             int srcSoTimeout = Integer.parseInt(properties.getProperty("so.timeout", "1000"));
             int srcCheckSoTimeout = Integer.parseInt(properties.getProperty("check.so.timeout", "10"));
             try {
-                sourceSocket.setSoTimeout(srcSoTimeout);
                 InputStream input = sourceSocket.getInputStream();
                 logger.debug("wating data from " + accepted);
                 while (!toClose) {
@@ -136,6 +135,7 @@ public class SocketAgentServer {
                     ByteArrayOutputStream output = new ByteArrayOutputStream();
                     try {
                         // 读取配置源socket
+                        sourceSocket.setSoTimeout(srcSoTimeout);
                         while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
                             output.write(buffer, 0, n);
                             count += n;
