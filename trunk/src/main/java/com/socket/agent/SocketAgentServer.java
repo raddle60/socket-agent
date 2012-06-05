@@ -138,7 +138,9 @@ public class SocketAgentServer {
                     byte[] buffer = new byte[1024 * 32];
                     try {
                         // 读取源socket
-                        sourceSocket.setSoTimeout(soTimeout);
+                        if (soTimeout != -1) {
+                            sourceSocket.setSoTimeout(soTimeout);
+                        }
                         while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
                             logger.info("received data from " + accepted + " size : " + n);
                             // 发送给目标socket
