@@ -7,11 +7,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,18 +137,28 @@ public class SocketAgentServer {
                 logger.debug("wating data from " + accepted);
                 while (!toClose) {
                     int n = 0;
+                    int sum = 0;
                     byte[] buffer = new byte[1024 * 32];
                     try {
                         // 读取源socket
                         if (soTimeout != -1) {
                             sourceSocket.setSoTimeout(soTimeout);
                         }
+                        if (sourceSocket.isClosed()) {
+                            logger.info(accepted + " is closed");
+                        }
                         while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
+                            sum += n;
                             logger.info("received data from " + accepted + " size : " + n);
+                            if(n > 0){
+                                logger.debug("received data from " + accepted + " : " + Hex.encodeHexString(Arrays.copyOf(buffer, n)).toUpperCase());
+                            }
                             // 发送给目标socket
+                            logger.info("sending data to " + targetSocket.getRemoteSocketAddress() + " size : " + n);
                             targetSocket.getOutputStream().write(buffer, 0, n);
                             targetSocket.getOutputStream().flush();
                         }
+                        logger.info("received data from " + accepted + " total size : " + sum);
                         if (!srcToDest) {
                             // 从目标接收结束，需要关闭socket
                             toClose = true;
