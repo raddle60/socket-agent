@@ -132,12 +132,15 @@ public class SocketAgentServer {
         public void run() {
             String accepted = sourceSocket.getRemoteSocketAddress() + "";
             int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "10000"));
+            int soMaxTotalTimeout = Integer.parseInt(properties.getProperty("so.timeout.total.max", "120000"));
             try {
                 InputStream input = sourceSocket.getInputStream();
                 logger.debug("wating data from " + accepted);
+                int soTotalTimeout = 0;
                 while (!toClose) {
                     int n = 0;
                     int sum = 0;
+                    long start = System.currentTimeMillis();
                     byte[] buffer = new byte[1024 * 32];
                     try {
                         // 读取源socket
@@ -158,14 +161,24 @@ public class SocketAgentServer {
                             targetSocket.getOutputStream().write(buffer, 0, n);
                             targetSocket.getOutputStream().flush();
                         }
-                        logger.info("received data from " + accepted + " total size : " + sum);
+                        logger.info(accepted + " positively closed , total received : " + sum);
                         if (!srcToDest) {
                             // 从目标接收结束，需要关闭socket
                             toClose = true;
                             closeQuietly(sourceSocket);
+                        } else {
+                            // 源目标关闭socket,说明已接收结束,要全部关闭
+                            closeSocket();
                         }
                     } catch (SocketTimeoutException e) {
+                        long span = System.currentTimeMillis() - start;
+                        soTotalTimeout += span;
                         logger.trace(e.getMessage());
+                        if (soTotalTimeout > soMaxTotalTimeout) {
+                            logger.info(accepted + " wating timeout " + soTotalTimeout + " , max :" + soMaxTotalTimeout);
+                            closeSocket();
+                            return;
+                        }
                     } catch (SocketException e) {
                         // 并发关闭问题，远程已关闭，这里还阻塞在读取，忽略这个错误
                         logger.trace(e.getMessage());
