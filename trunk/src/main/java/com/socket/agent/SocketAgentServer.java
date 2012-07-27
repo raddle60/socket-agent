@@ -191,8 +191,7 @@ public class SocketAgentServer {
                         if (!srcToDest) {
                             // 目标返回数据才需要关闭
                             if (timeoutToClose) {
-                                logger.info(accepted + " wating data from  " + sourceSocket.getRemoteSocketAddress()
-                                        + " timeout");
+                                logger.info("wating data from  " + accepted + " timeout");
                                 closeSocket();
                                 return;
                             }
