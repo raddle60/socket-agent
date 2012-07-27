@@ -137,9 +137,9 @@ public class SocketAgentServer {
                 InputStream input = sourceSocket.getInputStream();
                 logger.debug("wating data from " + accepted);
                 int soTotalTimeout = 0;
+                int sum = 0;
                 while (!toClose) {
                     int n = 0;
-                    int sum = 0;
                     long start = System.currentTimeMillis();
                     byte[] buffer = new byte[1024 * 32];
                     try {
