@@ -161,7 +161,8 @@ public class SocketAgentServer {
                             targetSocket.getOutputStream().write(buffer, 0, n);
                             targetSocket.getOutputStream().flush();
                         }
-                        logger.info(accepted + " positively closed , total received : " + sum);
+                        logger.info(accepted + " positively closed , total received : " + sum + " , srcToDest:"
+                                + srcToDest);
                         if (!srcToDest) {
                             // 从目标接收结束，需要关闭socket
                             toClose = true;
