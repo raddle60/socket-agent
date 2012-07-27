@@ -131,7 +131,9 @@ public class SocketAgentServer {
         @Override
         public void run() {
             String accepted = sourceSocket.getRemoteSocketAddress() + "";
-            int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "10000"));
+            int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "60000"));
+            int soReceivedTimeout = Integer.parseInt(properties.getProperty("so.received.timeout", "20"));
+            boolean timeoutToClose = Boolean.parseBoolean(properties.getProperty("so.received.timeout.to.close", "true"));
             int soMaxTotalTimeout = Integer.parseInt(properties.getProperty("so.timeout.total.max", "120000"));
             try {
                 InputStream input = sourceSocket.getInputStream();
@@ -160,6 +162,12 @@ public class SocketAgentServer {
                             logger.info("sending data to " + targetSocket.getRemoteSocketAddress() + " size : " + n);
                             targetSocket.getOutputStream().write(buffer, 0, n);
                             targetSocket.getOutputStream().flush();
+                            if (!srcToDest) {
+                                // 目标返回数据才需要关闭
+                                if (timeoutToClose) {
+                                    sourceSocket.setSoTimeout(soReceivedTimeout);
+                                }
+                            }
                         }
                         logger.info(accepted + " positively closed , total received : " + sum + " , srcToDest:"
                                 + srcToDest);
@@ -179,6 +187,15 @@ public class SocketAgentServer {
                             logger.info(accepted + " wating timeout " + soTotalTimeout + " , max :" + soMaxTotalTimeout);
                             closeSocket();
                             return;
+                        }
+                        if (!srcToDest) {
+                            // 目标返回数据才需要关闭
+                            if (timeoutToClose) {
+                                logger.info(accepted + " wating data from  " + sourceSocket.getRemoteSocketAddress()
+                                        + " timeout");
+                                closeSocket();
+                                return;
+                            }
                         }
                     } catch (SocketException e) {
                         // 并发关闭问题，远程已关闭，这里还阻塞在读取，忽略这个错误
