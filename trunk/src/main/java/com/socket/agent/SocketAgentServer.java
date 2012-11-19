@@ -155,6 +155,8 @@ public class SocketAgentServer {
                         while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
                             sum += n;
                             logger.info("received data from " + accepted + " size : " + n);
+                            // 一旦收到消息,往后延
+                            soTotalTimeout = 0;
                             if(n > 0){
                                 logger.debug("received data from " + accepted + " : " + Hex.encodeHexString(Arrays.copyOf(buffer, n)).toUpperCase());
                             }
