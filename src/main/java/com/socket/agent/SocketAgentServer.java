@@ -61,6 +61,8 @@ public class SocketAgentServer {
                         }
                         try {
                             threadPoolExecutor.execute(new AgentTask(socket));
+                            logger.debug("current running task : " + threadPoolExecutor.getActiveCount()
+                                    + " , current total task : " + threadPoolExecutor.getTaskCount());
                         } catch (Exception e) {
                             logger.error(e.getMessage());
                         }
@@ -96,10 +98,15 @@ public class SocketAgentServer {
                 }
                 return;
             }
+            long beginTransferTime = System.currentTimeMillis();
             TransferData sourceTransferData = new TransferData(socket, forwardSocket, true);
             TransferData destTransferData = new TransferData(forwardSocket, socket, false);
             sourceTransferData.related = destTransferData;
             destTransferData.related = sourceTransferData;
+            HeartbeatRecord heartbeatRecord = new HeartbeatRecord();
+            sourceTransferData.heartbeatRecord = heartbeatRecord;
+            destTransferData.heartbeatRecord = heartbeatRecord;
+            heartbeatRecord.heartBeat();
             sourceTransferData.start();
             destTransferData.start();
             try {
@@ -109,7 +116,8 @@ public class SocketAgentServer {
 
             }
             logger.debug("transfer data from " + socket.getRemoteSocketAddress() + " to "
-                    + forwardSocket.getRemoteSocketAddress() + " complete");
+                    + forwardSocket.getRemoteSocketAddress() + " complete , time span : "
+                    + (System.currentTimeMillis() - beginTransferTime) + "ms");
         }
 
     }
@@ -121,6 +129,7 @@ public class SocketAgentServer {
         private boolean toClose = false;
         private TransferData related;
         private boolean srcToDest;
+        private HeartbeatRecord heartbeatRecord;
 
         public TransferData(Socket sourceSocket, Socket targetSocket, boolean srcToDest) {
             this.sourceSocket = sourceSocket;
@@ -133,16 +142,15 @@ public class SocketAgentServer {
             String accepted = sourceSocket.getRemoteSocketAddress() + "";
             int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "60000"));
             int soReceivedTimeout = Integer.parseInt(properties.getProperty("so.received.timeout", "20"));
-            boolean timeoutToClose = Boolean.parseBoolean(properties.getProperty("so.received.timeout.to.close", "true"));
-            int soMaxTotalTimeout = Integer.parseInt(properties.getProperty("so.timeout.total.max", "120000"));
+            boolean timeoutToClose = Boolean.parseBoolean(properties
+                    .getProperty("so.received.timeout.to.close", "true"));
+            int soHeartbeatTimeout = Integer.parseInt(properties.getProperty("so.heartbeat.timeout", "120000"));
             try {
                 InputStream input = sourceSocket.getInputStream();
                 logger.debug("wating data from " + accepted);
-                int soTotalTimeout = 0;
                 int sum = 0;
                 while (!toClose) {
                     int n = 0;
-                    long start = System.currentTimeMillis();
                     byte[] buffer = new byte[1024 * 32];
                     try {
                         // 读取源socket
@@ -156,9 +164,10 @@ public class SocketAgentServer {
                             sum += n;
                             logger.info("received data from " + accepted + " size : " + n);
                             // 一旦收到消息,往后延
-                            soTotalTimeout = 0;
-                            if(n > 0){
-                                logger.debug("received data from " + accepted + " : " + Hex.encodeHexString(Arrays.copyOf(buffer, n)).toUpperCase());
+                            heartbeatRecord.heartBeat();
+                            if (n > 0) {
+                                logger.debug("received data from " + accepted + " : "
+                                        + Hex.encodeHexString(Arrays.copyOf(buffer, n)).toUpperCase());
                             }
                             // 发送给目标socket
                             logger.info("sending data to " + targetSocket.getRemoteSocketAddress() + " size : " + n);
@@ -182,13 +191,15 @@ public class SocketAgentServer {
                             closeSocket();
                         }
                     } catch (SocketTimeoutException e) {
-                        long span = System.currentTimeMillis() - start;
-                        soTotalTimeout += span;
-                        logger.trace(e.getMessage());
-                        if (soTotalTimeout > soMaxTotalTimeout) {
-                            logger.info(accepted + " wating timeout " + soTotalTimeout + " , max :" + soMaxTotalTimeout);
-                            closeSocket();
-                            return;
+                        if (!timeoutToClose) {
+                            // 如果是长连接,检查心跳
+                            if (System.currentTimeMillis() - heartbeatRecord.getLastHeartbeatTime() > soHeartbeatTimeout) {
+                                logger.info(accepted + " wating timeout "
+                                        + (System.currentTimeMillis() - heartbeatRecord.getLastHeartbeatTime())
+                                        + " , max :" + soHeartbeatTimeout);
+                                closeSocket();
+                                return;
+                            }
                         }
                         if (!srcToDest) {
                             // 目标返回数据才需要关闭
