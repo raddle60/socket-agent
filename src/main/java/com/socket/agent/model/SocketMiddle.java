@@ -9,6 +9,11 @@ public class SocketMiddle {
     private int listenPort1;
     private int listenPort2;
 
+    public SocketMiddle(int listenPort1, int listenPort2) {
+        this.listenPort1 = listenPort1;
+        this.listenPort2 = listenPort2;
+    }
+
     public int getListenPort1() {
         return listenPort1;
     }

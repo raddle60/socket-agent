@@ -1,5 +1,6 @@
 package com.socket.agent.middle;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
@@ -104,6 +105,11 @@ public class SocketMiddleServer {
                 int n = 0;
                 while (-1 != (n = input.read(buffer))) {
                     logger.info("received data from " + srcSocket.getRemoteSocketAddress() + " size : " + n);
+                    if (n > 0) {
+                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                        bo.write(buffer, 0, n);
+                        logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
+                    }
                     // 复制到另外一个端口
                     for (Socket socket2 : toSockets) {
                         if (!socket2.isClosed() && n > 0) {
@@ -122,5 +128,13 @@ public class SocketMiddleServer {
                 IOUtils.closeQuietly(srcSocket);
             }
         }
+    }
+
+    public List<SocketMiddle> getMiddles() {
+        return middles;
+    }
+
+    public void setMiddles(List<SocketMiddle> middles) {
+        this.middles = middles;
     }
 }

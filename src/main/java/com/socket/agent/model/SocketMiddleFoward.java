@@ -9,6 +9,11 @@ public class SocketMiddleFoward {
     private String middleServer;
     private String forwardTo;
 
+    public SocketMiddleFoward(String middleServer, String forwardTo) {
+        this.middleServer = middleServer;
+        this.forwardTo = forwardTo;
+    }
+
     public String getMiddleServer() {
         return middleServer;
     }
