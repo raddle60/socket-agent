@@ -134,7 +134,7 @@ public class SocketMiddleClient {
                     }
                 }
             } catch (SocketTimeoutException e) {
-                logger.info("close socket ,timewait from " + srcSocket.getRemoteSocketAddress());
+                logger.info("close socket ,time out from " + srcSocket.getRemoteSocketAddress());
                 IOUtils.closeQuietly(srcSocket);
             } catch (IOException e) {
                 logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed", e);
