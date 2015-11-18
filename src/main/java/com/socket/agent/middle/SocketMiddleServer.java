@@ -35,6 +35,7 @@ public class SocketMiddleServer {
                     public void run() {
                         while (true) {
                             try {
+                                logger.info("accepting on :" + server1.getLocalPort());
                                 final Socket socket = server1.accept();
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(socket);
@@ -52,6 +53,7 @@ public class SocketMiddleServer {
                     public void run() {
                         while (true) {
                             try {
+                                logger.info("accepting on :" + server2.getLocalPort());
                                 final Socket socket = server2.accept();
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(socket);
@@ -122,6 +124,7 @@ public class SocketMiddleServer {
                             }
                         }
                     }
+                    logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
                 }
             } catch (IOException e) {
                 logger.info(srcSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
