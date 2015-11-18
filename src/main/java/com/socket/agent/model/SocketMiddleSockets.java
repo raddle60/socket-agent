@@ -3,6 +3,7 @@ package com.socket.agent.model;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -17,6 +18,12 @@ public class SocketMiddleSockets {
     private List<Socket> port2Sockets = new ArrayList<Socket>();
 
     public List<Socket> getPort1Sockets() {
+        for (Iterator<Socket> iterator = port1Sockets.iterator(); iterator.hasNext();) {
+            Socket socket = iterator.next();
+            if (socket.isClosed()) {
+                iterator.remove();
+            }
+        }
         return port1Sockets;
     }
 
@@ -25,6 +32,12 @@ public class SocketMiddleSockets {
     }
 
     public List<Socket> getPort2Sockets() {
+        for (Iterator<Socket> iterator = port2Sockets.iterator(); iterator.hasNext();) {
+            Socket socket = iterator.next();
+            if (socket.isClosed()) {
+                iterator.remove();
+            }
+        }
         return port2Sockets;
     }
 
