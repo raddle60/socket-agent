@@ -42,12 +42,12 @@ public class SocketMiddleClient {
                         while (true) {
                             try {
                                 if (serverSocket.isClosed()) {
-                                    logger.info(serverSocket.getRemoteSocketAddress() + " is closed");
+                                    logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
                                     serverSocket = new Socket();
                                     serverSocket.setSoTimeout(600 * 1000);
                                     serverSocket
                                             .connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
-                                    logger.info("connected to middle server " + socketMiddleFoward.getMiddleServer());
+                                    logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
                                     fowardSocket.setMiddleServerSocket(serverSocket);
                                 }
                                 byte[] buffer = new byte[1024 * 32];
@@ -90,7 +90,7 @@ public class SocketMiddleClient {
                                 }
                                 logger.info("close socket ,received -1 from " + serverSocket.getRemoteSocketAddress());
                                 IOUtils.closeQuietly(serverSocket);
-                                logger.info("reconnecting to " + serverSocket.getRemoteSocketAddress() + " after 5 seconds");
+                                logger.info("reconnecting to " + socketMiddleFoward.getMiddleServer() + " after 5 seconds");
                                 try {
                                     Thread.sleep(5000);
                                 } catch (InterruptedException e2) {
@@ -107,13 +107,13 @@ public class SocketMiddleClient {
                                     serverSocket.setSoTimeout(600 * 1000);
                                     serverSocket
                                             .connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
-                                    logger.info("connected to middle server " + socketMiddleFoward.getMiddleServer());
+                                    logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
                                     fowardSocket.setMiddleServerSocket(serverSocket);
                                 } catch (NumberFormatException e1) {
                                 } catch (IOException e1) {
-                                    logger.info("connect to " + serverSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
+                                    logger.info("connect to " + socketMiddleFoward.getMiddleServer() + " error :" + e.getMessage(), e);
                                     IOUtils.closeQuietly(serverSocket);
-                                    logger.info("reconnecting to " + serverSocket.getRemoteSocketAddress() + " after 5 seconds");
+                                    logger.info("reconnecting to " + socketMiddleFoward.getMiddleServer() + " after 5 seconds");
                                     try {
                                         Thread.sleep(5000);
                                     } catch (InterruptedException e2) {
