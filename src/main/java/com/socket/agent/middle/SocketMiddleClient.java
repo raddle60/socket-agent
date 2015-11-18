@@ -101,6 +101,7 @@ public class SocketMiddleClient {
                                 } catch (IOException e1) {
                                     logger.info("connect to " + serverSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
                                     IOUtils.closeQuietly(serverSocket);
+                                    logger.info("reconnecting to " + serverSocket.getRemoteSocketAddress() + " after 5 seconds");
                                     try {
                                         Thread.sleep(5000);
                                     } catch (InterruptedException e2) {
