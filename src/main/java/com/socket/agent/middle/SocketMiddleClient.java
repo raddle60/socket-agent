@@ -41,13 +41,18 @@ public class SocketMiddleClient {
                         Socket serverSocket = fowardSocket.getMiddleServerSocket();
                         while (true) {
                             try {
+                                if (serverSocket.isClosed()) {
+                                    logger.info(serverSocket.getRemoteSocketAddress() + " is closed");
+                                    serverSocket = new Socket();
+                                    serverSocket.setSoTimeout(600 * 1000);
+                                    serverSocket
+                                            .connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
+                                    logger.info("connected to middle server " + socketMiddleFoward.getMiddleServer());
+                                    fowardSocket.setMiddleServerSocket(serverSocket);
+                                }
                                 byte[] buffer = new byte[1024 * 32];
                                 InputStream input = serverSocket.getInputStream();
                                 logger.info("wating data from " + serverSocket.getRemoteSocketAddress());
-                                if (serverSocket.isClosed()) {
-                                    logger.info(serverSocket.getRemoteSocketAddress() + " is closed");
-                                    return;
-                                }
                                 int n = 0;
                                 // 复制到另外一个端口
                                 Socket forwardToSocket = null;
@@ -82,6 +87,13 @@ public class SocketMiddleClient {
                                         }
                                     }
                                     logger.info("wating data from " + serverSocket.getRemoteSocketAddress());
+                                }
+                                logger.info("close socket ,received -1 from " + serverSocket.getRemoteSocketAddress());
+                                IOUtils.closeQuietly(serverSocket);
+                                logger.info("reconnecting to " + serverSocket.getRemoteSocketAddress() + " after 5 seconds");
+                                try {
+                                    Thread.sleep(5000);
+                                } catch (InterruptedException e2) {
                                 }
                             } catch (IOException e) {
                                 if (e instanceof SocketTimeoutException) {
@@ -160,6 +172,8 @@ public class SocketMiddleClient {
                     }
                     logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
                 }
+                logger.info("close socket ,received -1 from " + srcSocket.getRemoteSocketAddress());
+                IOUtils.closeQuietly(srcSocket);
             } catch (SocketTimeoutException e) {
                 logger.info("close socket ,time out from " + srcSocket.getRemoteSocketAddress());
                 IOUtils.closeQuietly(srcSocket);

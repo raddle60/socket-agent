@@ -126,6 +126,8 @@ public class SocketMiddleServer {
                     }
                     logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
                 }
+                logger.info("close socket ,received -1 from " + srcSocket.getRemoteSocketAddress());
+                IOUtils.closeQuietly(srcSocket);
             } catch (IOException e) {
                 logger.info(srcSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
                 IOUtils.closeQuietly(srcSocket);
