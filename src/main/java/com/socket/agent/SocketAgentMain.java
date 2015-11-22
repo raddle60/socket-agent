@@ -27,27 +27,39 @@ public class SocketAgentMain {
             logger.error("load " + new File("socket-agent.properties").getAbsolutePath() + " failed");
             return;
         }
-        //        SocketAgentServer server = new SocketAgentServer(properties);
-        //        server.start();
-        String middleServers = properties.getProperty("middleServers");
-        if (middleServers != null) {
-            String[] split = middleServers.split(",");
-            SocketMiddleServer middleServer = new SocketMiddleServer();
-            for (String string : split) {
-                String[] split2 = string.split(":");
-                middleServer.getMiddles().add(new SocketMiddle(Integer.parseInt(split2[0]), Integer.parseInt(split2[1])));
-            }
-            middleServer.start();
+        try {
+            SocketAgentServer server = new SocketAgentServer(properties);
+            server.start();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        String middleClients = properties.getProperty("middleClients");
-        if (middleClients != null) {
-            String[] split = middleClients.split("\\|");
-            SocketMiddleClient client = new SocketMiddleClient();
-            for (String string : split) {
-                String[] split2 = string.split("\\-");
-                client.getMiddles().add(new SocketMiddleFoward(split2[0], split2[1]));
+        try {
+            String middleServers = properties.getProperty("middleServers");
+            if (middleServers != null) {
+                String[] split = middleServers.split(",");
+                SocketMiddleServer middleServer = new SocketMiddleServer();
+                for (String string : split) {
+                    String[] split2 = string.split(":");
+                    middleServer.getMiddles().add(new SocketMiddle(Integer.parseInt(split2[0]), Integer.parseInt(split2[1])));
+                }
+                middleServer.start();
             }
-            client.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            String middleClients = properties.getProperty("middleClients");
+            if (middleClients != null) {
+                String[] split = middleClients.split("\\|");
+                SocketMiddleClient client = new SocketMiddleClient();
+                for (String string : split) {
+                    String[] split2 = string.split("\\-");
+                    client.getMiddles().add(new SocketMiddleFoward(split2[0], split2[1]));
+                }
+                client.start();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
