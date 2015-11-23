@@ -1,8 +1,6 @@
 package com.socket.agent.middle;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -14,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.socket.agent.model.SocketMiddle;
 import com.socket.agent.model.SocketMiddleSockets;
+import com.socket.agent.util.SocketTranferTask;
 
 /**
  * description: 
@@ -39,7 +38,7 @@ public class SocketMiddleServer {
                                 final Socket socket = server1.accept();
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(socket);
-                                new Thread(new ForwardSockets(socket, sockets.getPort2Sockets())).start();
+                                new Thread(new SocketTranferTask(socket, sockets.getPort2Sockets())).start();
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -57,7 +56,7 @@ public class SocketMiddleServer {
                                 final Socket socket = server2.accept();
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(socket);
-                                new Thread(new ForwardSockets(socket, sockets.getPort1Sockets())).start();
+                                new Thread(new SocketTranferTask(socket, sockets.getPort1Sockets())).start();
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -82,55 +81,6 @@ public class SocketMiddleServer {
             IOUtils.closeQuietly(server.getServer2());
             for (Socket socket : server.getPort2Sockets()) {
                 IOUtils.closeQuietly(socket);
-            }
-        }
-    }
-
-    private class ForwardSockets implements Runnable {
-        private Socket srcSocket;
-        private List<Socket> toSockets;
-
-        public ForwardSockets(Socket srcSocket, List<Socket> toSockets) {
-            this.srcSocket = srcSocket;
-            this.toSockets = toSockets;
-        }
-
-        public void run() {
-            try {
-                byte[] buffer = new byte[1024 * 32];
-                InputStream input = srcSocket.getInputStream();
-                logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
-                if (srcSocket.isClosed()) {
-                    logger.info(srcSocket.getRemoteSocketAddress() + " is closed");
-                    return;
-                }
-                int n = 0;
-                while (-1 != (n = input.read(buffer))) {
-                    logger.info("received data from " + srcSocket.getRemoteSocketAddress() + " size : " + n);
-                    if (n > 0) {
-                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                        bo.write(buffer, 0, n);
-                        logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
-                    }
-                    // 复制到另外一个端口
-                    for (Socket socket2 : toSockets) {
-                        if (!socket2.isClosed() && n > 0) {
-                            try {
-                                logger.info("write data to " + socket2.getRemoteSocketAddress());
-                                socket2.getOutputStream().write(buffer, 0, n);
-                            } catch (IOException e) {
-                                logger.info(socket2.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
-                                IOUtils.closeQuietly(socket2);
-                            }
-                        }
-                    }
-                    logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
-                }
-                logger.info("close socket ,received -1 from " + srcSocket.getRemoteSocketAddress());
-                IOUtils.closeQuietly(srcSocket);
-            } catch (IOException e) {
-                logger.info(srcSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
-                IOUtils.closeQuietly(srcSocket);
             }
         }
     }

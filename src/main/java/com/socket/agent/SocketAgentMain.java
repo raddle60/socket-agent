@@ -28,10 +28,12 @@ public class SocketAgentMain {
             return;
         }
         try {
-            SocketAgentServer server = new SocketAgentServer(properties);
-            server.start();
+            if (properties.getProperty("local.port") != null) {
+                SocketAgentServer server = new SocketAgentServer(properties);
+                server.start();
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("SocketAgentServer start failed " + e.getMessage(), e);
         }
         try {
             String middleServers = properties.getProperty("middleServers");
@@ -45,7 +47,7 @@ public class SocketAgentMain {
                 middleServer.start();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("SocketMiddleServer start failed " + e.getMessage(), e);
         }
         try {
             String middleClients = properties.getProperty("middleClients");
@@ -59,7 +61,7 @@ public class SocketAgentMain {
                 client.start();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("SocketMiddleClient start failed " + e.getMessage(), e);
         }
     }
 }
