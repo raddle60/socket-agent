@@ -44,6 +44,7 @@ public class SocketAgentMain {
                     String[] split2 = string.split(":");
                     middleServer.getMiddles().add(new SocketMiddle(Integer.parseInt(split2[0]), Integer.parseInt(split2[1])));
                 }
+                middleServer.setSoTimeout(Integer.parseInt(properties.getProperty("middleServer.so.timeout", "60000")));
                 middleServer.start();
             }
         } catch (Exception e) {
@@ -58,8 +59,8 @@ public class SocketAgentMain {
                     String[] split2 = string.split("\\-");
                     client.getMiddles().add(new SocketMiddleFoward(split2[0], split2[1]));
                 }
-                client.setClientSoTimeout(60 * 1000);
-                client.setServerSoTimeout(1800 * 1000);
+                client.setClientSoTimeout(Integer.parseInt(properties.getProperty("middleClient.forward.so.timeout", "60000")));
+                client.setServerSoTimeout(Integer.parseInt(properties.getProperty("middleClient.server.timeout", "1800000")));
                 client.start();
             }
         } catch (Exception e) {

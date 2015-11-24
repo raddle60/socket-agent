@@ -24,6 +24,7 @@ public class SocketMiddleServer {
     private final static Logger logger = LoggerFactory.getLogger(SocketMiddleServer.class);
     private List<SocketMiddle> middles = new ArrayList<SocketMiddle>();
     private List<SocketMiddleSockets> servers = new ArrayList<SocketMiddleSockets>();
+    private int soTimeout;
 
     public synchronized void start() {
         for (SocketMiddle socketMiddle : middles) {
@@ -37,7 +38,9 @@ public class SocketMiddleServer {
                             try {
                                 logger.info("accepting on :" + server1.getLocalPort());
                                 final Socket socket = server1.accept();
-                                socket.setSoTimeout(60000);
+                                if (soTimeout > 0) {
+                                    socket.setSoTimeout(soTimeout);
+                                }
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(new SocketCopySocket(false, socket));
                                 TransferUtils.addSocket(socket, sockets.getPort2Sockets());
@@ -56,7 +59,9 @@ public class SocketMiddleServer {
                             try {
                                 logger.info("accepting on :" + server2.getLocalPort());
                                 final Socket socket = server2.accept();
-                                socket.setSoTimeout(60000);
+                                if (soTimeout > 0) {
+                                    socket.setSoTimeout(soTimeout);
+                                }
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(new SocketCopySocket(false, socket));
                                 TransferUtils.addSocket(socket, sockets.getPort1Sockets());
@@ -94,5 +99,13 @@ public class SocketMiddleServer {
 
     public void setMiddles(List<SocketMiddle> middles) {
         this.middles = middles;
+    }
+
+    public int getSoTimeout() {
+        return soTimeout;
+    }
+
+    public void setSoTimeout(int soTimeout) {
+        this.soTimeout = soTimeout;
     }
 }

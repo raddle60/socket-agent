@@ -48,7 +48,7 @@ public class SocketAgentServer {
                     while (true) {
                         try {
                             socket = server.accept();
-                            socket.setSoTimeout(60000);
+                            socket.setSoTimeout(Integer.parseInt(properties.getProperty("so.timeout", "60000")));
                             logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                             try {
                                 Socket forwardToSocket = connectForward();
