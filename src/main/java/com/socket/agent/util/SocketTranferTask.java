@@ -30,9 +30,9 @@ public class SocketTranferTask implements Runnable {
         this.toSockets = s;
     }
 
-    public SocketTranferTask(Socket srcSocket, Socket toSocket, boolean discardToSocketData) {
+    public SocketTranferTask(Socket srcSocket, Socket toSocket, boolean discardData) {
         this(srcSocket, toSocket);
-        this.discardData = discardToSocketData;
+        this.discardData = discardData;
     }
 
     public void run() {
