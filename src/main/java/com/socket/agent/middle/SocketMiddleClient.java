@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.socket.agent.model.SocketCopySocket;
 import com.socket.agent.model.SocketMiddleFoward;
 import com.socket.agent.model.SocketMiddleFowardSocket;
-import com.socket.agent.util.CopyToTask;
+import com.socket.agent.util.TransferUtils;
 
 /**
  * description: 
@@ -61,7 +61,7 @@ public class SocketMiddleClient {
                             if (fowardSocket.getForwardToSocket() == null || fowardSocket.getForwardToSocket().isClosed() || serverChanged) {
                                 Socket forwardToSocket = connectForward(socketMiddleFoward);
                                 fowardSocket.setForwardToSocket(forwardToSocket);
-                                new CopyToTask(serverSocket, new SocketCopySocket(true, forwardToSocket)).run();
+                                TransferUtils.addSocket(serverSocket, new SocketCopySocket(true, forwardToSocket));
                             }
                         } catch (IOException e) {
                             logger.error("connect to forward " + socketMiddleFoward.getForwardTo() + " failed , " + e.getMessage());

@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.socket.agent.model.SocketCopySocket;
 import com.socket.agent.model.SocketMiddle;
 import com.socket.agent.model.SocketMiddleSockets;
-import com.socket.agent.util.CopyToTask;
+import com.socket.agent.util.TransferUtils;
 
 /**
  * description: 
@@ -40,7 +40,7 @@ public class SocketMiddleServer {
                                 socket.setSoTimeout(60000);
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(new SocketCopySocket(false, socket));
-                                new Thread(new CopyToTask(socket, sockets.getPort2Sockets())).start();
+                                TransferUtils.addSocket(socket, sockets.getPort2Sockets());
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -59,7 +59,7 @@ public class SocketMiddleServer {
                                 socket.setSoTimeout(60000);
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(new SocketCopySocket(false, socket));
-                                new Thread(new CopyToTask(socket, sockets.getPort1Sockets())).start();
+                                TransferUtils.addSocket(socket, sockets.getPort1Sockets());
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;

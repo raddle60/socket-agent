@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.socket.agent.model.SocketCopy;
 import com.socket.agent.model.SocketCopySocket;
-import com.socket.agent.util.CopyToTask;
+import com.socket.agent.util.TransferUtils;
 
 /**
  * Hello world!
@@ -42,7 +42,7 @@ public class SocketCopyServer {
                                 logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
                                 continue;
                             }
-                            new CopyToTask(socket, toSockets).run();
+                            TransferUtils.addSocket(socket, toSockets);
                         }
                     }
 

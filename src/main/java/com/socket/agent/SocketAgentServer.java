@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.socket.agent.model.SocketCopySocket;
-import com.socket.agent.util.CopyToTask;
+import com.socket.agent.util.TransferUtils;
 
 /**
  * Hello world!
@@ -52,7 +52,7 @@ public class SocketAgentServer {
                             logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                             try {
                                 Socket forwardToSocket = connectForward();
-                                new CopyToTask(socket, new SocketCopySocket(true, forwardToSocket)).run();
+                                TransferUtils.addSocket(socket, new SocketCopySocket(true, forwardToSocket));
                             } catch (IOException e) {
                                 logger.error("connect to forward " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed , " + e.getMessage());
                             }
