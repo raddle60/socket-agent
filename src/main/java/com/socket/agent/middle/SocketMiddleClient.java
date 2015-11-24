@@ -34,25 +34,21 @@ public class SocketMiddleClient {
                 new Thread(new Runnable() {
 
                     public void run() {
-                        int i = 0;
                         Socket serverSocket = fowardSocket.getMiddleServerSocket();
                         while (true) {
                             try {
                                 if (!serverSocket.isClosed()) {
-                                    if (i == 0) {
-                                        sendingData(fowardSocket, socketMiddleFoward, serverSocket);
-                                    }
+                                    sendingData(fowardSocket, socketMiddleFoward, serverSocket, false);
                                 } else if (serverSocket.isClosed()) {
                                     logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
                                     serverSocket = connectServer(socketMiddleFoward);
                                     fowardSocket.setMiddleServerSocket(serverSocket);
-                                    sendingData(fowardSocket, socketMiddleFoward, serverSocket);
+                                    sendingData(fowardSocket, socketMiddleFoward, serverSocket, true);
                                 }
                             } catch (IOException e) {
-                                logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
+                                logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed , " + e.getMessage());
                                 IOUtils.closeQuietly(serverSocket);
                             }
-                            i++;
                             try {
                                 Thread.sleep(5000);
                             } catch (InterruptedException e2) {
@@ -60,15 +56,15 @@ public class SocketMiddleClient {
                         }
                     }
 
-                    private void sendingData(SocketMiddleFowardSocket fowardSocket, final SocketMiddleFoward socketMiddleFoward, Socket serverSocket) {
+                    private void sendingData(SocketMiddleFowardSocket fowardSocket, final SocketMiddleFoward socketMiddleFoward, Socket serverSocket, boolean serverChanged) {
                         try {
-                            if (fowardSocket.getForwardToSocket() == null || fowardSocket.getForwardToSocket().isClosed()) {
+                            if (fowardSocket.getForwardToSocket() == null || fowardSocket.getForwardToSocket().isClosed() || serverChanged) {
                                 Socket forwardToSocket = connectForward(socketMiddleFoward);
                                 fowardSocket.setForwardToSocket(forwardToSocket);
                                 new CopyToTask(serverSocket, new SocketCopySocket(true, forwardToSocket)).run();
                             }
                         } catch (IOException e) {
-                            logger.error("connect to forward " + socketMiddleFoward.getForwardTo() + " failed", e);
+                            logger.error("connect to forward " + socketMiddleFoward.getForwardTo() + " failed , " + e.getMessage());
                         }
                     }
 

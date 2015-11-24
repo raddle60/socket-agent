@@ -37,6 +37,7 @@ public class SocketMiddleServer {
                             try {
                                 logger.info("accepting on :" + server1.getLocalPort());
                                 final Socket socket = server1.accept();
+                                socket.setSoTimeout(60000);
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(new SocketCopySocket(false, socket));
                                 new Thread(new CopyToTask(socket, sockets.getPort2Sockets())).start();
@@ -55,6 +56,7 @@ public class SocketMiddleServer {
                             try {
                                 logger.info("accepting on :" + server2.getLocalPort());
                                 final Socket socket = server2.accept();
+                                socket.setSoTimeout(60000);
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(new SocketCopySocket(false, socket));
                                 new Thread(new CopyToTask(socket, sockets.getPort1Sockets())).start();

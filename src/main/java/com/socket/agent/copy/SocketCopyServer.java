@@ -29,6 +29,7 @@ public class SocketCopyServer {
             while (true) {
                 logger.error("listening on " + localPort);
                 final Socket socket = server.accept();
+                socket.setSoTimeout(60000);
                 new Thread(new Runnable() {
 
                     public void run() {
@@ -38,7 +39,7 @@ public class SocketCopyServer {
                                 Socket copyToSocket = connect(socketCopy.getCopyTo());
                                 toSockets.add(new SocketCopySocket(socketCopy.isPrimary(), copyToSocket));
                             } catch (IOException e) {
-                                logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage(), e);
+                                logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
                                 continue;
                             }
                             new CopyToTask(socket, toSockets).run();

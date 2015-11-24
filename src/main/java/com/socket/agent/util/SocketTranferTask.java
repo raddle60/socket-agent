@@ -67,7 +67,7 @@ public class SocketTranferTask implements Runnable {
                                     socket2.getOutputStream().flush();
                                 }
                             } catch (IOException e) {
-                                logger.info(socket2.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
+                                logger.info(socket2.getRemoteSocketAddress() + " error : " + e.getMessage());
                                 IOUtils.closeQuietly(socket2);
                             }
                         }
@@ -86,7 +86,7 @@ public class SocketTranferTask implements Runnable {
             logger.info("close socket , time out from " + srcSocket.getRemoteSocketAddress());
             IOUtils.closeQuietly(srcSocket);
         } catch (IOException e) {
-            logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed", e);
+            logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
             IOUtils.closeQuietly(srcSocket);
         }
     }

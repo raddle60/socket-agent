@@ -48,12 +48,13 @@ public class SocketAgentServer {
                     while (true) {
                         try {
                             socket = server.accept();
+                            socket.setSoTimeout(60000);
                             logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                             try {
                                 Socket forwardToSocket = connectForward();
                                 new CopyToTask(socket, new SocketCopySocket(true, forwardToSocket)).run();
                             } catch (IOException e) {
-                                logger.error("connect to forward " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed", e);
+                                logger.error("connect to forward " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed , " + e.getMessage());
                             }
                         } catch (IOException e) {
                             logger.error("accept socket failed", e);
