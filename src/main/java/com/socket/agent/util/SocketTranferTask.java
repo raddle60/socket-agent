@@ -76,8 +76,7 @@ public class SocketTranferTask implements Runnable {
                 if (hasNoClosedSocket) {
                     logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
                 } else {
-                    logger.info("close socket " + srcSocket.getRemoteSocketAddress() + ", all receive socket is closed");
-                    IOUtils.closeQuietly(srcSocket);
+                    logger.info("all receive socket is closed");
                     return;
                 }
             }
