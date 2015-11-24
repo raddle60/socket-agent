@@ -53,23 +53,32 @@ public class SocketTranferTask implements Runnable {
                     logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
                 }
                 // 复制到另外一个端口
+                boolean hasNoClosedSocket = false;
                 for (Socket socket2 : toSockets) {
-                    if (!socket2.isClosed() && n > 0) {
-                        try {
-                            if (discardData) {
-                                logger.info("discard data for " + socket2.getRemoteSocketAddress());
-                            } else {
-                                logger.info("sending data to " + socket2.getRemoteSocketAddress());
-                                socket2.getOutputStream().write(buffer, 0, n);
-                                socket2.getOutputStream().flush();
+                    if (!socket2.isClosed()) {
+                        hasNoClosedSocket = true;
+                        if (n > 0) {
+                            try {
+                                if (discardData) {
+                                    logger.info("discard data for " + socket2.getRemoteSocketAddress());
+                                } else {
+                                    logger.info("sending data to " + socket2.getRemoteSocketAddress());
+                                    socket2.getOutputStream().write(buffer, 0, n);
+                                    socket2.getOutputStream().flush();
+                                }
+                            } catch (IOException e) {
+                                logger.info(socket2.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
+                                IOUtils.closeQuietly(socket2);
                             }
-                        } catch (IOException e) {
-                            logger.info(socket2.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
-                            IOUtils.closeQuietly(socket2);
                         }
                     }
                 }
-                logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
+                if (hasNoClosedSocket) {
+                    logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
+                } else {
+                    logger.info(srcSocket.getRemoteSocketAddress() + " all to socket is closed");
+                    return;
+                }
             }
             logger.info("close socket , received -1 from " + srcSocket.getRemoteSocketAddress());
             IOUtils.closeQuietly(srcSocket);
