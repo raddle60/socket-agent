@@ -31,20 +31,20 @@ public class SocketMiddleClient {
         for (final SocketMiddleFoward socketMiddleFoward : middles) {
             final SocketMiddleFowardSocket fowardSocket = new SocketMiddleFowardSocket();
             try {
-                Socket serverSocketInit = connectServer(socketMiddleFoward);
-                fowardSocket.setMiddleServerSocket(serverSocketInit);
                 new Thread(new Runnable() {
 
                     public void run() {
                         Socket serverSocket = fowardSocket.getMiddleServerSocket();
                         while (true) {
                             try {
-                                if (!serverSocket.isClosed()) {
+                                if (serverSocket != null && !serverSocket.isClosed()) {
                                     sendingData(fowardSocket, socketMiddleFoward, serverSocket, false);
-                                } else if (serverSocket.isClosed()) {
-                                    logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
-                                    serverSocket = connectServer(socketMiddleFoward);
-                                    fowardSocket.setMiddleServerSocket(serverSocket);
+                                } else if (serverSocket == null || serverSocket.isClosed()) {
+                                    if (serverSocket != null) {
+                                        logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
+                                        serverSocket = connectServer(socketMiddleFoward);
+                                        fowardSocket.setMiddleServerSocket(serverSocket);
+                                    }
                                     sendingData(fowardSocket, socketMiddleFoward, serverSocket, true);
                                 }
                             } catch (IOException e) {
@@ -83,8 +83,6 @@ public class SocketMiddleClient {
                     }
                 }).start();
             } catch (NumberFormatException e) {
-                logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
-            } catch (IOException e) {
                 logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
             }
         }
