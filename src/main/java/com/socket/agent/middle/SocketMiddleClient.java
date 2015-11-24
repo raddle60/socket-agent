@@ -89,7 +89,7 @@ public class SocketMiddleClient {
     private Socket connectServer(final SocketMiddleFoward socketMiddleFoward) throws SocketException, IOException {
         Socket serverSocket;
         serverSocket = new Socket();
-        serverSocket.setSoTimeout(600 * 1000);
+        serverSocket.setSoTimeout(1800 * 1000);
         logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
         serverSocket.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])), 5000);
         logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
