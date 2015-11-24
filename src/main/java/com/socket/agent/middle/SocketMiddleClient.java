@@ -76,7 +76,7 @@ public class SocketMiddleClient {
                         Socket forwardToSocket;
                         forwardToSocket = new Socket();
                         logger.info("connecting to forward to " + socketMiddleFoward.getForwardTo());
-                        forwardToSocket.connect(new InetSocketAddress(socketMiddleFoward.getForwardTo().split(":")[0], Integer.parseInt(socketMiddleFoward.getForwardTo().split(":")[1])));
+                        forwardToSocket.connect(new InetSocketAddress(socketMiddleFoward.getForwardTo().split(":")[0], Integer.parseInt(socketMiddleFoward.getForwardTo().split(":")[1])), 5000);
                         logger.info("connected to forward to " + socketMiddleFoward.getForwardTo());
                         forwardToSocket.setSoTimeout(60000);
                         return forwardToSocket;
@@ -95,7 +95,7 @@ public class SocketMiddleClient {
         serverSocket = new Socket();
         serverSocket.setSoTimeout(600 * 1000);
         logger.info("connecting to middle server " + serverSocket.getRemoteSocketAddress());
-        serverSocket.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
+        serverSocket.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])), 5000);
         logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
         return serverSocket;
     }

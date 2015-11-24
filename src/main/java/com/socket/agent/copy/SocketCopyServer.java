@@ -49,7 +49,7 @@ public class SocketCopyServer {
                         Socket forwardToSocket;
                         forwardToSocket = new Socket();
                         logger.info("connecting to " + copyTo);
-                        forwardToSocket.connect(new InetSocketAddress(copyTo.split(":")[0], Integer.parseInt(copyTo.split(":")[1])));
+                        forwardToSocket.connect(new InetSocketAddress(copyTo.split(":")[0], Integer.parseInt(copyTo.split(":")[1])), 5000);
                         logger.info("connected to " + copyTo);
                         forwardToSocket.setSoTimeout(60000);
                         return forwardToSocket;
