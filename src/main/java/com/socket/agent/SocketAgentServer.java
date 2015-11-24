@@ -1,21 +1,16 @@
 package com.socket.agent;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.util.Arrays;
 import java.util.Properties;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.socket.agent.model.SocketCopySocket;
+import com.socket.agent.util.CopyToTask;
 
 /**
  * Hello world!
@@ -26,8 +21,6 @@ public class SocketAgentServer {
     private boolean started = false;
     private Properties properties;
     private Thread thread;
-    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(0, 50, 10L, TimeUnit.SECONDS,
-            new SynchronousQueue<Runnable>());
 
     public SocketAgentServer(Properties properties) {
         this.properties = properties;
@@ -49,22 +42,22 @@ public class SocketAgentServer {
                         logger.info("socket agent listening on " + port + " agent for " + destIp + ":" + destPort);
                     } catch (IOException e) {
                         logger.error("starting socket agent failed", e);
+                        return;
                     }
                     Socket socket = null;
                     while (true) {
                         try {
                             socket = server.accept();
                             logger.info("accepted socket :" + socket.getRemoteSocketAddress());
+                            try {
+                                Socket forwardToSocket = connectForward();
+                                new CopyToTask(socket, new SocketCopySocket(true, forwardToSocket)).run();
+                            } catch (IOException e) {
+                                logger.error("connect to forward " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed", e);
+                            }
                         } catch (IOException e) {
                             logger.error("accept socket failed", e);
-                            continue;
-                        }
-                        try {
-                            threadPoolExecutor.execute(new AgentTask(socket));
-                            logger.debug("current running task : " + threadPoolExecutor.getActiveCount()
-                                    + " , current total task : " + threadPoolExecutor.getTaskCount());
-                        } catch (Exception e) {
-                            logger.error(e.getMessage());
+                            return;
                         }
                     }
                 }
@@ -73,178 +66,16 @@ public class SocketAgentServer {
         }
     }
 
-    private class AgentTask implements Runnable {
-
-        private Socket socket;
-
-        public AgentTask(Socket socket) {
-            this.socket = socket;
-        }
-
-        public void run() {
-            int destPort = Integer.parseInt(properties.getProperty("dest.port"));
-            String destIp = properties.getProperty("dest.ip");
-            Socket forwardSocket = null;
-            try {
-                forwardSocket = new Socket();
-                forwardSocket.connect(new InetSocketAddress(destIp, destPort),
-                        Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
-                logger.info("connected to dest " + destIp + ":" + destPort);
-            } catch (IOException e) {
-                logger.error(socket.getRemoteSocketAddress() + ", connect to dest " + destIp + ":" + destPort
-                        + " failed", e);
-                if (socket != null) {
-                    closeQuietly(socket);
-                }
-                return;
-            }
-            long beginTransferTime = System.currentTimeMillis();
-            TransferData sourceTransferData = new TransferData(socket, forwardSocket, true);
-            TransferData destTransferData = new TransferData(forwardSocket, socket, false);
-            sourceTransferData.related = destTransferData;
-            destTransferData.related = sourceTransferData;
-            HeartbeatRecord heartbeatRecord = new HeartbeatRecord();
-            sourceTransferData.heartbeatRecord = heartbeatRecord;
-            destTransferData.heartbeatRecord = heartbeatRecord;
-            heartbeatRecord.heartBeat();
-            sourceTransferData.start();
-            destTransferData.start();
-            try {
-                sourceTransferData.join();
-                destTransferData.join();
-            } catch (InterruptedException e) {
-
-            }
-            logger.debug("transfer data from " + socket.getRemoteSocketAddress() + " to "
-                    + forwardSocket.getRemoteSocketAddress() + " complete , time span : "
-                    + (System.currentTimeMillis() - beginTransferTime) + "ms");
-        }
-
+    private Socket connectForward() throws NumberFormatException, IOException {
+        int destPort = Integer.parseInt(properties.getProperty("dest.port"));
+        String destIp = properties.getProperty("dest.ip");
+        Socket forwardSocket = new Socket();
+        logger.info("connecting to dest " + destIp + ":" + destPort);
+        forwardSocket.connect(new InetSocketAddress(destIp, destPort), Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
+        logger.info("connected to dest " + destIp + ":" + destPort);
+        int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "60000"));
+        forwardSocket.setSoTimeout(soTimeout);
+        return forwardSocket;
     }
 
-    private class TransferData extends Thread {
-
-        private Socket sourceSocket;
-        private Socket targetSocket;
-        private boolean toClose = false;
-        private TransferData related;
-        private boolean srcToDest;
-        private HeartbeatRecord heartbeatRecord;
-
-        public TransferData(Socket sourceSocket, Socket targetSocket, boolean srcToDest) {
-            this.sourceSocket = sourceSocket;
-            this.targetSocket = targetSocket;
-            this.srcToDest = srcToDest;
-        }
-
-        @Override
-        public void run() {
-            String accepted = sourceSocket.getRemoteSocketAddress() + "";
-            int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "60000"));
-            int soReceivedTimeout = Integer.parseInt(properties.getProperty("so.received.timeout", "20"));
-            boolean timeoutToClose = Boolean.parseBoolean(properties
-                    .getProperty("so.received.timeout.to.close", "true"));
-            int soHeartbeatTimeout = Integer.parseInt(properties.getProperty("so.heartbeat.timeout", "120000"));
-            try {
-                InputStream input = sourceSocket.getInputStream();
-                logger.debug("wating data from " + accepted);
-                int sum = 0;
-                while (!toClose) {
-                    int n = 0;
-                    byte[] buffer = new byte[1024 * 32];
-                    try {
-                        // 读取源socket
-                        if (soTimeout != -1) {
-                            sourceSocket.setSoTimeout(soTimeout);
-                        }
-                        if (sourceSocket.isClosed()) {
-                            logger.info(accepted + " is closed");
-                        }
-                        while (!sourceSocket.isClosed() && -1 != (n = input.read(buffer))) {
-                            sum += n;
-                            logger.info("received data from " + accepted + " size : " + n);
-                            // 一旦收到消息,往后延
-                            heartbeatRecord.heartBeat();
-                            if (n > 0) {
-                                logger.debug("received data from " + accepted + " : "
-                                        + Hex.encodeHexString(Arrays.copyOf(buffer, n)).toUpperCase());
-                            }
-                            // 发送给目标socket
-                            logger.info("sending data to " + targetSocket.getRemoteSocketAddress() + " size : " + n);
-                            targetSocket.getOutputStream().write(buffer, 0, n);
-                            targetSocket.getOutputStream().flush();
-                            if (!srcToDest) {
-                                // 目标返回数据才需要关闭
-                                if (timeoutToClose) {
-                                    sourceSocket.setSoTimeout(soReceivedTimeout);
-                                }
-                            }
-                        }
-                        logger.info(accepted + " positively closed , total received : " + sum + " , srcToDest:"
-                                + srcToDest);
-                        if (!srcToDest) {
-                            // 从目标接收结束，需要关闭socket
-                            toClose = true;
-                            closeQuietly(sourceSocket);
-                        } else {
-                            // 源目标关闭socket,说明已接收结束,要全部关闭
-                            closeSocket();
-                        }
-                    } catch (SocketTimeoutException e) {
-                        if (!timeoutToClose) {
-                            // 如果是长连接,检查心跳
-                            if (System.currentTimeMillis() - heartbeatRecord.getLastHeartbeatTime() > soHeartbeatTimeout) {
-                                logger.info(accepted + " wating timeout "
-                                        + (System.currentTimeMillis() - heartbeatRecord.getLastHeartbeatTime())
-                                        + " , max :" + soHeartbeatTimeout);
-                                closeSocket();
-                                return;
-                            }
-                        }
-                        if (!srcToDest) {
-                            // 目标返回数据才需要关闭
-                            if (timeoutToClose) {
-                                logger.info("wating data from  " + accepted + " timeout");
-                                closeSocket();
-                                return;
-                            }
-                        }
-                    } catch (SocketException e) {
-                        // 并发关闭问题，远程已关闭，这里还阻塞在读取，忽略这个错误
-                        logger.trace(e.getMessage());
-                        closeQuietly(sourceSocket);
-                    }
-                }
-            } catch (IOException e) {
-                logger.error("transfer data from " + sourceSocket.getRemoteSocketAddress() + " to "
-                        + targetSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
-                return;
-            } finally {
-                closeSocket();
-            }
-        }
-
-        private void closeSocket() {
-            toClose = true;
-            related.toClose = true;
-            if (sourceSocket != null) {
-                closeQuietly(sourceSocket);
-            }
-            if (targetSocket != null) {
-                closeQuietly(targetSocket);
-            }
-        }
-
-    }
-
-    private void closeQuietly(Socket socket) {
-        try {
-            if (socket != null && !socket.isClosed()) {
-                socket.close();
-                logger.info("closed socket " + socket.getRemoteSocketAddress());
-            }
-        } catch (IOException e1) {
-            logger.error(e1.getMessage(), e1);
-        }
-    }
 }
