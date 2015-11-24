@@ -31,7 +31,7 @@ public class TransferUtils {
             public void run() {
                 while (true) {
                     try {
-                        Thread.sleep(10000);
+                        Thread.sleep(60000);
                     } catch (InterruptedException e) {
                         return;
                     }
@@ -73,28 +73,30 @@ public class TransferUtils {
 
     private static synchronized void startTask() {
         for (Socket srcSocket : socketMap.keySet()) {
-            if (!transferMap.containsKey(srcSocket)) {
+            if (!transferMap.containsKey(srcSocket) && !srcSocket.isClosed()) {
                 // 源socket任务
                 SocketTranferTask srcTask = new SocketTranferTask(srcSocket, socketMap.get(srcSocket));
                 new Thread(srcTask).start();
                 transferMap.put(srcSocket, srcTask);
-                Set<ToScoket> toSet = socketMap.get(srcSocket);
-                for (ToScoket toScoket : toSet) {
-                    // 目标socket任务
-                    if (!transferMap.containsKey(toScoket.getSocket())) {
-                        Set<ToScoket> toSrcSet = socketMap.get(toScoket.getSocket());
-                        if (toSrcSet == null) {
-                            toSrcSet = new LinkedHashSet<ToScoket>();
-                            socketMap.put(toScoket.getSocket(), toSrcSet);
-                        }
-                        ToScoket o = new ToScoket(srcSocket, false);
-                        if (!toSrcSet.contains(o)) {
-                            toSrcSet.add(o);
-                        }
-                        SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), toSrcSet);
-                        new Thread(task2).start();
-                        transferMap.put(toScoket.getSocket(), task2);
+            }
+        }
+        for (Socket srcSocket : socketMap.keySet()) {
+            Set<ToScoket> toSet = socketMap.get(srcSocket);
+            for (ToScoket toScoket : toSet) {
+                // 目标socket任务
+                if (!transferMap.containsKey(toScoket.getSocket()) && !toScoket.getSocket().isClosed()) {
+                    Set<ToScoket> toSrcSet = socketMap.get(toScoket.getSocket());
+                    if (toSrcSet == null) {
+                        toSrcSet = new LinkedHashSet<ToScoket>();
+                        socketMap.put(toScoket.getSocket(), toSrcSet);
                     }
+                    ToScoket o = new ToScoket(srcSocket, false);
+                    if (!toSrcSet.contains(o)) {
+                        toSrcSet.add(o);
+                    }
+                    SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), toSrcSet);
+                    new Thread(task2).start();
+                    transferMap.put(toScoket.getSocket(), task2);
                 }
             }
         }
