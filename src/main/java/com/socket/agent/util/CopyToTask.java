@@ -28,7 +28,6 @@ public class CopyToTask implements Runnable {
     }
 
     public void run() {
-        toSockets = new ArrayList<SocketCopySocket>();
         boolean hasPrimary = false;
         for (SocketCopySocket socketCopySocket : toSockets) {
             if (socketCopySocket.isPrimary()) {
