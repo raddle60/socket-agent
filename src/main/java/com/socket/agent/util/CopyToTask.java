@@ -35,25 +35,23 @@ public class CopyToTask implements Runnable {
             }
         }
         int i = 0;
+        List<Socket> targetSockets = new ArrayList<Socket>();
         for (SocketCopySocket socketCopySocket2 : toSockets) {
             if (hasPrimary) {
                 if (socketCopySocket2.isPrimary()) {
-                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
                     new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket)).start();
                 } else {
-                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
                     new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket, true)).start();
                 }
             } else {
                 if (i == 0) {
-                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
                     new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket)).start();
                 } else {
-                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
                     new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket, true)).start();
                 }
             }
             i++;
         }
+        new Thread(new SocketTranferTask(fromSocket, targetSockets)).start();
     }
 }
