@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
@@ -35,6 +36,10 @@ public class SocketTranferTask implements Runnable {
             }
             int n = 0;
             while (-1 != (n = input.read(buffer))) {
+                if (srcSocket.isClosed()) {
+                    logger.info(srcSocket.getRemoteSocketAddress() + " is closed");
+                    return;
+                }
                 logger.info("received data from " + srcSocket.getRemoteSocketAddress() + " size : " + n);
                 if (n > 0) {
                     ByteArrayOutputStream bo = new ByteArrayOutputStream();
@@ -75,6 +80,13 @@ public class SocketTranferTask implements Runnable {
     }
 
     private ToScoket getPrimarySocket() {
+        // 去除已关闭的
+        for (Iterator<ToScoket> iterator = toSockets.iterator(); iterator.hasNext();) {
+            ToScoket toScoket = iterator.next();
+            if (toScoket.getSocket().isClosed()) {
+                iterator.remove();
+            }
+        }
         boolean hasPrimary = false;
         for (ToScoket socketCopySocket : toSockets) {
             if (socketCopySocket.isPrimary()) {

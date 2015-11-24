@@ -3,10 +3,14 @@ package com.socket.agent.util;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.socket.agent.model.SocketCopySocket;
 import com.socket.agent.model.ToScoket;
@@ -17,8 +21,37 @@ import com.socket.agent.model.ToScoket;
  * time : 2015年11月23日 下午9:18:30
  */
 public class TransferUtils {
+    private static final Logger logger = LoggerFactory.getLogger(TransferUtils.class);
     private static Map<Socket, Set<ToScoket>> socketMap = new HashMap<Socket, Set<ToScoket>>();
     private static Map<Socket, SocketTranferTask> transferMap = new HashMap<Socket, SocketTranferTask>();
+
+    static {
+        new Thread(new Runnable() {
+
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                    for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
+                        Socket key = iterator.next();
+                        if (key.isClosed()) {
+                            iterator.remove();
+                        }
+                    }
+                    for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
+                        Socket key = iterator.next();
+                        if (key.isClosed()) {
+                            iterator.remove();
+                        }
+                    }
+                    logger.info("current socket count :" + socketMap.size() + " ,transfer count :" + transferMap.size());
+                }
+            }
+        }).start();
+    }
 
     public static void addSocket(Socket fromSocket, SocketCopySocket toSocket) {
         List<SocketCopySocket> ss = new ArrayList<SocketCopySocket>();
@@ -26,7 +59,7 @@ public class TransferUtils {
         addSocket(fromSocket, ss);
     }
 
-    public static void addSocket(Socket fromSocket, List<SocketCopySocket> toSockets) {
+    public static synchronized void addSocket(Socket fromSocket, List<SocketCopySocket> toSockets) {
         Set<ToScoket> srcSet = socketMap.get(fromSocket);
         if (srcSet == null) {
             srcSet = new LinkedHashSet<ToScoket>();
@@ -38,12 +71,13 @@ public class TransferUtils {
         startTask();
     }
 
-    private static void startTask() {
+    private static synchronized void startTask() {
         for (Socket srcSocket : socketMap.keySet()) {
             if (!transferMap.containsKey(srcSocket)) {
                 // 源socket任务
                 SocketTranferTask srcTask = new SocketTranferTask(srcSocket, socketMap.get(srcSocket));
                 new Thread(srcTask).start();
+                transferMap.put(srcSocket, srcTask);
                 Set<ToScoket> toSet = socketMap.get(srcSocket);
                 for (ToScoket toScoket : toSet) {
                     // 目标socket任务
@@ -59,6 +93,7 @@ public class TransferUtils {
                         }
                         SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), toSrcSet);
                         new Thread(task2).start();
+                        transferMap.put(toScoket.getSocket(), task2);
                     }
                 }
             }
