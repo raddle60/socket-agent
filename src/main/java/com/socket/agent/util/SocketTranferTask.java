@@ -5,34 +5,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.socket.agent.model.ToScoket;
+
 public class SocketTranferTask implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(SocketTranferTask.class);
     private Socket srcSocket;
-    private List<Socket> toSockets;
+    private Set<ToScoket> toSockets;
     private boolean discardData;
 
-    public SocketTranferTask(Socket srcSocket, List<Socket> toSockets) {
+    public SocketTranferTask(Socket srcSocket, Set<ToScoket> toSockets) {
         this.srcSocket = srcSocket;
         this.toSockets = toSockets;
-    }
-
-    public SocketTranferTask(Socket srcSocket, Socket toSocket) {
-        this.srcSocket = srcSocket;
-        List<Socket> s = new ArrayList<Socket>();
-        s.add(toSocket);
-        this.toSockets = s;
-    }
-
-    public SocketTranferTask(Socket srcSocket, Socket toSocket, boolean discardData) {
-        this(srcSocket, toSocket);
-        this.discardData = discardData;
     }
 
     public void run() {
@@ -53,33 +42,26 @@ public class SocketTranferTask implements Runnable {
                     logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
                 }
                 // 复制到另外一个端口
-                boolean hasNoClosedSocket = false;
-                for (Socket socket2 : toSockets) {
-                    if (!socket2.isClosed()) {
-                        hasNoClosedSocket = true;
+                ToScoket primarySocket = getPrimarySocket();
+                for (ToScoket socket2 : toSockets) {
+                    if (!socket2.getSocket().isClosed()) {
                         if (n > 0) {
                             try {
-                                if (discardData) {
-                                    logger.info("discard data for " + socket2.getRemoteSocketAddress());
+                                if (primarySocket.equals(socket2)) {
+                                    logger.info("sending data to " + socket2.getSocket().getRemoteSocketAddress());
+                                    socket2.getSocket().getOutputStream().write(buffer, 0, n);
+                                    socket2.getSocket().getOutputStream().flush();
                                 } else {
-                                    logger.info("sending data to " + socket2.getRemoteSocketAddress());
-                                    socket2.getOutputStream().write(buffer, 0, n);
-                                    socket2.getOutputStream().flush();
+                                    logger.info("discard data for " + socket2.getSocket().getRemoteSocketAddress());
                                 }
                             } catch (IOException e) {
-                                logger.info(socket2.getRemoteSocketAddress() + " error : " + e.getMessage());
-                                IOUtils.closeQuietly(socket2);
+                                logger.info(socket2.getSocket().getRemoteSocketAddress() + " error : " + e.getMessage());
+                                IOUtils.closeQuietly(socket2.getSocket());
                             }
                         }
                     }
                 }
-                if (hasNoClosedSocket) {
-                    logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
-                } else {
-                    logger.info("close socket " + srcSocket.getRemoteSocketAddress() + ", all receive socket is closed");
-                    IOUtils.closeQuietly(srcSocket);
-                    return;
-                }
+                logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
             }
             logger.info("close socket , received -1 from " + srcSocket.getRemoteSocketAddress());
             IOUtils.closeQuietly(srcSocket);
@@ -90,6 +72,27 @@ public class SocketTranferTask implements Runnable {
             logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
             IOUtils.closeQuietly(srcSocket);
         }
+    }
+
+    private ToScoket getPrimarySocket() {
+        boolean hasPrimary = false;
+        for (ToScoket socketCopySocket : toSockets) {
+            if (socketCopySocket.isPrimary()) {
+                hasPrimary = true;
+            }
+        }
+        for (ToScoket socketCopySocket2 : toSockets) {
+            if (hasPrimary) {
+                if (socketCopySocket2.isPrimary()) {
+                    return socketCopySocket2;
+                }
+            } else {
+                if (!socketCopySocket2.getSocket().isClosed()) {
+                    return socketCopySocket2;
+                }
+            }
+        }
+        return null;
     }
 
     public boolean isDiscardData() {
