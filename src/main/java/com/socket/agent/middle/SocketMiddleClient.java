@@ -42,9 +42,9 @@ public class SocketMiddleClient {
                                 } else if (serverSocket == null || serverSocket.isClosed()) {
                                     if (serverSocket != null) {
                                         logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
-                                        serverSocket = connectServer(socketMiddleFoward);
-                                        fowardSocket.setMiddleServerSocket(serverSocket);
                                     }
+                                    serverSocket = connectServer(socketMiddleFoward);
+                                    fowardSocket.setMiddleServerSocket(serverSocket);
                                     sendingData(fowardSocket, socketMiddleFoward, serverSocket, true);
                                 }
                             } catch (IOException e) {
