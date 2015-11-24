@@ -1,11 +1,9 @@
 package com.socket.agent.middle;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,8 +11,10 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.socket.agent.model.SocketCopySocket;
 import com.socket.agent.model.SocketMiddleFoward;
 import com.socket.agent.model.SocketMiddleFowardSocket;
+import com.socket.agent.util.CopyToTask;
 
 /**
  * description: 
@@ -29,106 +29,56 @@ public class SocketMiddleClient {
         for (final SocketMiddleFoward socketMiddleFoward : middles) {
             final SocketMiddleFowardSocket fowardSocket = new SocketMiddleFowardSocket();
             logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
-            Socket serverSocketInit = new Socket();
             try {
-                serverSocketInit.setSoTimeout(600 * 1000);
-                serverSocketInit.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
+                logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
+                Socket serverSocketInit = connectServer(socketMiddleFoward);
                 logger.info("connected to middle server " + socketMiddleFoward.getMiddleServer());
                 fowardSocket.setMiddleServerSocket(serverSocketInit);
                 new Thread(new Runnable() {
 
                     public void run() {
+                        int i = 0;
                         Socket serverSocket = fowardSocket.getMiddleServerSocket();
                         while (true) {
                             try {
-                                if (serverSocket.isClosed()) {
-                                    logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
-                                    serverSocket = new Socket();
-                                    serverSocket.setSoTimeout(600 * 1000);
-                                    serverSocket
-                                            .connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
-                                    logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
-                                    fowardSocket.setMiddleServerSocket(serverSocket);
-                                }
-                                byte[] buffer = new byte[1024 * 32];
-                                InputStream input = serverSocket.getInputStream();
-                                logger.info("wating data from " + serverSocket.getRemoteSocketAddress());
-                                int n = 0;
-                                // 复制到另外一个端口
-                                Socket forwardToSocket = null;
-                                while (-1 != (n = input.read(buffer))) {
-                                    logger.info("received data from " + serverSocket.getRemoteSocketAddress() + " size : " + n);
-                                    if (n > 0) {
-                                        if (forwardToSocket == null) {
-                                            forwardToSocket = reconnect(socketMiddleFoward);
-                                            new Thread(new TransferData(forwardToSocket, serverSocket)).start();
-                                        }
-                                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                                        bo.write(buffer, 0, n);
-                                        logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
-                                        try {
-                                            if (forwardToSocket.isClosed()) {
-                                                forwardToSocket = reconnect(socketMiddleFoward);
-                                                new Thread(new TransferData(forwardToSocket, serverSocket)).start();
-                                            }
-                                            logger.info("write data to " + forwardToSocket.getRemoteSocketAddress());
-                                            forwardToSocket.getOutputStream().write(buffer, 0, n);
-                                        } catch (IOException e) {
-                                            logger.info(forwardToSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
-                                            IOUtils.closeQuietly(forwardToSocket);
-                                            try {
-                                                forwardToSocket = reconnect(socketMiddleFoward);
-                                                new Thread(new TransferData(forwardToSocket, serverSocket)).start();
-                                                logger.info("write data to " + forwardToSocket.getRemoteSocketAddress());
-                                                forwardToSocket.getOutputStream().write(buffer, 0, n);
-                                            } catch (Exception e1) {
-                                                logger.info("rewrite data to " + forwardToSocket.getRemoteSocketAddress() + " error ", e);
-                                            }
-                                        }
+                                if (!serverSocket.isClosed()) {
+                                    if (i == 0) {
+                                        sendingData(socketMiddleFoward, serverSocket);
                                     }
-                                    logger.info("wating data from " + serverSocket.getRemoteSocketAddress());
-                                }
-                                logger.info("close socket ,received -1 from " + serverSocket.getRemoteSocketAddress());
-                                IOUtils.closeQuietly(serverSocket);
-                                logger.info("reconnecting to " + socketMiddleFoward.getMiddleServer() + " after 5 seconds");
-                                try {
-                                    Thread.sleep(5000);
-                                } catch (InterruptedException e2) {
+                                } else if (serverSocket.isClosed()) {
+                                    logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
+                                    serverSocket = connectServer(socketMiddleFoward);
+                                    fowardSocket.setMiddleServerSocket(serverSocket);
+                                    sendingData(socketMiddleFoward, serverSocket);
                                 }
                             } catch (IOException e) {
-                                if (e instanceof SocketTimeoutException) {
-                                    logger.info("close socket ,time out from " + serverSocket.getRemoteSocketAddress());
-                                } else {
-                                    logger.info(serverSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
-                                }
+                                logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
                                 IOUtils.closeQuietly(serverSocket);
-                                try {
-                                    serverSocket = new Socket();
-                                    serverSocket.setSoTimeout(600 * 1000);
-                                    serverSocket
-                                            .connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
-                                    logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
-                                    fowardSocket.setMiddleServerSocket(serverSocket);
-                                } catch (NumberFormatException e1) {
-                                } catch (IOException e1) {
-                                    logger.info("connect to " + socketMiddleFoward.getMiddleServer() + " error :" + e.getMessage(), e);
-                                    IOUtils.closeQuietly(serverSocket);
-                                    logger.info("reconnecting to " + socketMiddleFoward.getMiddleServer() + " after 5 seconds");
-                                    try {
-                                        Thread.sleep(5000);
-                                    } catch (InterruptedException e2) {
-                                    }
-                                }
+                            }
+                            i++;
+                            try {
+                                Thread.sleep(5000);
+                            } catch (InterruptedException e2) {
                             }
                         }
                     }
 
-                    private Socket reconnect(final SocketMiddleFoward socketMiddleFoward) throws IOException {
+                    private void sendingData(final SocketMiddleFoward socketMiddleFoward, Socket serverSocket) {
+                        try {
+                            Socket forwardToSocket = connectForward(socketMiddleFoward);
+                            new CopyToTask(serverSocket, new SocketCopySocket(true, forwardToSocket)).run();
+                        } catch (IOException e) {
+                            logger.error("connect to forward " + socketMiddleFoward.getForwardTo() + " failed", e);
+                        }
+                    }
+
+                    private Socket connectForward(final SocketMiddleFoward socketMiddleFoward) throws IOException {
                         Socket forwardToSocket;
                         forwardToSocket = new Socket();
+                        logger.info("connecting to forward to " + socketMiddleFoward.getForwardTo());
                         forwardToSocket.connect(new InetSocketAddress(socketMiddleFoward.getForwardTo().split(":")[0], Integer.parseInt(socketMiddleFoward.getForwardTo().split(":")[1])));
-                        logger.info("reconnected to forward to " + socketMiddleFoward.getForwardTo());
-                        forwardToSocket.setSoTimeout(1000);
+                        logger.info("connected to forward to " + socketMiddleFoward.getForwardTo());
+                        forwardToSocket.setSoTimeout(60000);
                         return forwardToSocket;
                     }
                 }).start();
@@ -140,48 +90,14 @@ public class SocketMiddleClient {
         }
     }
 
-    private class TransferData implements Runnable {
-
-        private Socket srcSocket;
-        private Socket toSocket;
-
-        public TransferData(Socket srcSocket, Socket toSocket) {
-            this.srcSocket = srcSocket;
-            this.toSocket = toSocket;
-        }
-
-        public void run() {
-            try {
-                InputStream input = srcSocket.getInputStream();
-                logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
-                int n = 0;
-                byte[] buffer = new byte[1024 * 32];
-                if (srcSocket.isClosed()) {
-                    logger.info(srcSocket.getRemoteSocketAddress() + " is closed");
-                }
-                while (-1 != (n = input.read(buffer))) {
-                    logger.info("received data from " + srcSocket.getRemoteSocketAddress() + " size : " + n);
-                    if (n > 0) {
-                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                        bo.write(buffer, 0, n);
-                        logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
-                        // 发送给目标socket
-                        logger.info("sending data to " + toSocket.getRemoteSocketAddress());
-                        toSocket.getOutputStream().write(buffer, 0, n);
-                        toSocket.getOutputStream().flush();
-                    }
-                    logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
-                }
-                logger.info("close socket ,received -1 from " + srcSocket.getRemoteSocketAddress());
-                IOUtils.closeQuietly(srcSocket);
-            } catch (SocketTimeoutException e) {
-                logger.info("close socket ,time out from " + srcSocket.getRemoteSocketAddress());
-                IOUtils.closeQuietly(srcSocket);
-            } catch (IOException e) {
-                logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed", e);
-                IOUtils.closeQuietly(srcSocket);
-            }
-        }
+    private Socket connectServer(final SocketMiddleFoward socketMiddleFoward) throws SocketException, IOException {
+        Socket serverSocket;
+        serverSocket = new Socket();
+        serverSocket.setSoTimeout(600 * 1000);
+        logger.info("connecting to middle server " + serverSocket.getRemoteSocketAddress());
+        serverSocket.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])));
+        logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
+        return serverSocket;
     }
 
     public List<SocketMiddleFoward> getMiddles() {

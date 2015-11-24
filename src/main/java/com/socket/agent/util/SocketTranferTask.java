@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,8 +59,9 @@ public class SocketTranferTask implements Runnable {
                             if (discardData) {
                                 logger.info("discard data for " + socket2.getRemoteSocketAddress());
                             } else {
-                                logger.info("write data to " + socket2.getRemoteSocketAddress());
+                                logger.info("sending data to " + socket2.getRemoteSocketAddress());
                                 socket2.getOutputStream().write(buffer, 0, n);
+                                socket2.getOutputStream().flush();
                             }
                         } catch (IOException e) {
                             logger.info(socket2.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
@@ -69,10 +71,13 @@ public class SocketTranferTask implements Runnable {
                 }
                 logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
             }
-            logger.info("close socket ,received -1 from " + srcSocket.getRemoteSocketAddress());
+            logger.info("close socket , received -1 from " + srcSocket.getRemoteSocketAddress());
+            IOUtils.closeQuietly(srcSocket);
+        } catch (SocketTimeoutException e) {
+            logger.info("close socket , time out from " + srcSocket.getRemoteSocketAddress());
             IOUtils.closeQuietly(srcSocket);
         } catch (IOException e) {
-            logger.info(srcSocket.getRemoteSocketAddress() + " error :" + e.getMessage(), e);
+            logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed", e);
             IOUtils.closeQuietly(srcSocket);
         }
     }

@@ -20,6 +20,13 @@ public class CopyToTask implements Runnable {
         this.toSockets = toSockets;
     }
 
+    public CopyToTask(Socket fromSocket, SocketCopySocket toSocket) {
+        this.fromSocket = fromSocket;
+        List<SocketCopySocket> ss = new ArrayList<SocketCopySocket>();
+        ss.add(toSocket);
+        this.toSockets = ss;
+    }
+
     public void run() {
         toSockets = new ArrayList<SocketCopySocket>();
         boolean hasPrimary = false;
@@ -34,13 +41,18 @@ public class CopyToTask implements Runnable {
                 if (socketCopySocket2.isPrimary()) {
                     new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
                     new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket)).start();
+                } else {
+                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
+                    new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket, true)).start();
                 }
-            } else if (i == 0) {
-                new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
-                new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket)).start();
             } else {
-                new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
-                new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket, true)).start();
+                if (i == 0) {
+                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
+                    new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket)).start();
+                } else {
+                    new Thread(new SocketTranferTask(fromSocket, socketCopySocket2.getToSocket())).start();
+                    new Thread(new SocketTranferTask(socketCopySocket2.getToSocket(), fromSocket, true)).start();
+                }
             }
             i++;
         }

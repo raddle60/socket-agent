@@ -1,7 +1,6 @@
 package com.socket.agent.model;
 
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -14,34 +13,34 @@ import java.util.List;
 public class SocketMiddleSockets {
     private ServerSocket server1;
     private ServerSocket server2;
-    private List<Socket> port1Sockets = new ArrayList<Socket>();
-    private List<Socket> port2Sockets = new ArrayList<Socket>();
+    private List<SocketCopySocket> port1Sockets = new ArrayList<SocketCopySocket>();
+    private List<SocketCopySocket> port2Sockets = new ArrayList<SocketCopySocket>();
 
-    public List<Socket> getPort1Sockets() {
-        for (Iterator<Socket> iterator = port1Sockets.iterator(); iterator.hasNext();) {
-            Socket socket = iterator.next();
-            if (socket.isClosed()) {
+    public List<SocketCopySocket> getPort1Sockets() {
+        for (Iterator<SocketCopySocket> iterator = port1Sockets.iterator(); iterator.hasNext();) {
+            SocketCopySocket socket = iterator.next();
+            if (socket.getToSocket().isClosed()) {
                 iterator.remove();
             }
         }
         return port1Sockets;
     }
 
-    public void setPort1Sockets(List<Socket> port1Sockets) {
+    public void setPort1Sockets(List<SocketCopySocket> port1Sockets) {
         this.port1Sockets = port1Sockets;
     }
 
-    public List<Socket> getPort2Sockets() {
-        for (Iterator<Socket> iterator = port2Sockets.iterator(); iterator.hasNext();) {
-            Socket socket = iterator.next();
-            if (socket.isClosed()) {
+    public List<SocketCopySocket> getPort2Sockets() {
+        for (Iterator<SocketCopySocket> iterator = port2Sockets.iterator(); iterator.hasNext();) {
+            SocketCopySocket socket = iterator.next();
+            if (socket.getToSocket().isClosed()) {
                 iterator.remove();
             }
         }
         return port2Sockets;
     }
 
-    public void setPort2Sockets(List<Socket> port2Sockets) {
+    public void setPort2Sockets(List<SocketCopySocket> port2Sockets) {
         this.port2Sockets = port2Sockets;
     }
 

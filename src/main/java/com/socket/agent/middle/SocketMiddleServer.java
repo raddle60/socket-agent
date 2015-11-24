@@ -10,9 +10,10 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.socket.agent.model.SocketCopySocket;
 import com.socket.agent.model.SocketMiddle;
 import com.socket.agent.model.SocketMiddleSockets;
-import com.socket.agent.util.SocketTranferTask;
+import com.socket.agent.util.CopyToTask;
 
 /**
  * description: 
@@ -37,8 +38,8 @@ public class SocketMiddleServer {
                                 logger.info("accepting on :" + server1.getLocalPort());
                                 final Socket socket = server1.accept();
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
-                                sockets.getPort1Sockets().add(socket);
-                                new Thread(new SocketTranferTask(socket, sockets.getPort2Sockets())).start();
+                                sockets.getPort1Sockets().add(new SocketCopySocket(false, socket));
+                                new Thread(new CopyToTask(socket, sockets.getPort2Sockets())).start();
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -55,8 +56,8 @@ public class SocketMiddleServer {
                                 logger.info("accepting on :" + server2.getLocalPort());
                                 final Socket socket = server2.accept();
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
-                                sockets.getPort2Sockets().add(socket);
-                                new Thread(new SocketTranferTask(socket, sockets.getPort1Sockets())).start();
+                                sockets.getPort2Sockets().add(new SocketCopySocket(false, socket));
+                                new Thread(new CopyToTask(socket, sockets.getPort1Sockets())).start();
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -75,12 +76,12 @@ public class SocketMiddleServer {
     public void close() {
         for (SocketMiddleSockets server : servers) {
             IOUtils.closeQuietly(server.getServer1());
-            for (Socket socket : server.getPort1Sockets()) {
-                IOUtils.closeQuietly(socket);
+            for (SocketCopySocket socket : server.getPort1Sockets()) {
+                IOUtils.closeQuietly(socket.getToSocket());
             }
             IOUtils.closeQuietly(server.getServer2());
-            for (Socket socket : server.getPort2Sockets()) {
-                IOUtils.closeQuietly(socket);
+            for (SocketCopySocket socket : server.getPort2Sockets()) {
+                IOUtils.closeQuietly(socket.getToSocket());
             }
         }
     }
