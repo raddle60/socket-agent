@@ -72,7 +72,7 @@ public class SocketAgentServer {
         Socket forwardSocket = new Socket();
         logger.info("connecting to dest " + destIp + ":" + destPort);
         forwardSocket.connect(new InetSocketAddress(destIp, destPort), Integer.parseInt(properties.getProperty("dest.conn.timeout", "5000")));
-        logger.info("connected to dest " + destIp + ":" + destPort);
+        logger.info("connected to dest " + forwardSocket.getRemoteSocketAddress());
         int soTimeout = Integer.parseInt(properties.getProperty("so.timeout", "60000"));
         forwardSocket.setSoTimeout(soTimeout);
         return forwardSocket;

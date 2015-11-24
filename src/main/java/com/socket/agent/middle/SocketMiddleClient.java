@@ -28,11 +28,8 @@ public class SocketMiddleClient {
     public synchronized void start() {
         for (final SocketMiddleFoward socketMiddleFoward : middles) {
             final SocketMiddleFowardSocket fowardSocket = new SocketMiddleFowardSocket();
-            logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
             try {
-                logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
                 Socket serverSocketInit = connectServer(socketMiddleFoward);
-                logger.info("connected to middle server " + socketMiddleFoward.getMiddleServer());
                 fowardSocket.setMiddleServerSocket(serverSocketInit);
                 new Thread(new Runnable() {
 
@@ -43,14 +40,14 @@ public class SocketMiddleClient {
                             try {
                                 if (!serverSocket.isClosed()) {
                                     if (i == 0) {
-                                        sendingData(socketMiddleFoward, serverSocket);
+                                        sendingData(fowardSocket, socketMiddleFoward, serverSocket);
                                     }
                                 } else if (serverSocket.isClosed()) {
                                     logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
                                     serverSocket = connectServer(socketMiddleFoward);
                                     fowardSocket.setMiddleServerSocket(serverSocket);
-                                    sendingData(socketMiddleFoward, serverSocket);
                                 }
+                                sendingData(fowardSocket, socketMiddleFoward, serverSocket);
                             } catch (IOException e) {
                                 logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
                                 IOUtils.closeQuietly(serverSocket);
@@ -63,9 +60,10 @@ public class SocketMiddleClient {
                         }
                     }
 
-                    private void sendingData(final SocketMiddleFoward socketMiddleFoward, Socket serverSocket) {
+                    private void sendingData(SocketMiddleFowardSocket fowardSocket, final SocketMiddleFoward socketMiddleFoward, Socket serverSocket) {
                         try {
                             Socket forwardToSocket = connectForward(socketMiddleFoward);
+                            fowardSocket.setForwardToSocket(forwardToSocket);
                             new CopyToTask(serverSocket, new SocketCopySocket(true, forwardToSocket)).run();
                         } catch (IOException e) {
                             logger.error("connect to forward " + socketMiddleFoward.getForwardTo() + " failed", e);
@@ -77,7 +75,7 @@ public class SocketMiddleClient {
                         forwardToSocket = new Socket();
                         logger.info("connecting to forward to " + socketMiddleFoward.getForwardTo());
                         forwardToSocket.connect(new InetSocketAddress(socketMiddleFoward.getForwardTo().split(":")[0], Integer.parseInt(socketMiddleFoward.getForwardTo().split(":")[1])), 5000);
-                        logger.info("connected to forward to " + socketMiddleFoward.getForwardTo());
+                        logger.info("connected to forward to " + forwardToSocket.getRemoteSocketAddress());
                         forwardToSocket.setSoTimeout(60000);
                         return forwardToSocket;
                     }
@@ -94,7 +92,7 @@ public class SocketMiddleClient {
         Socket serverSocket;
         serverSocket = new Socket();
         serverSocket.setSoTimeout(600 * 1000);
-        logger.info("connecting to middle server " + serverSocket.getRemoteSocketAddress());
+        logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
         serverSocket.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])), 5000);
         logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
         return serverSocket;

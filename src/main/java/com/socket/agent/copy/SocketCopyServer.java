@@ -50,7 +50,7 @@ public class SocketCopyServer {
                         forwardToSocket = new Socket();
                         logger.info("connecting to " + copyTo);
                         forwardToSocket.connect(new InetSocketAddress(copyTo.split(":")[0], Integer.parseInt(copyTo.split(":")[1])), 5000);
-                        logger.info("connected to " + copyTo);
+                        logger.info("connected to " + forwardToSocket.getRemoteSocketAddress());
                         forwardToSocket.setSoTimeout(60000);
                         return forwardToSocket;
                     }

@@ -38,8 +38,8 @@ public class SocketTranferTask implements Runnable {
     public void run() {
         try {
             byte[] buffer = new byte[1024 * 32];
-            InputStream input = srcSocket.getInputStream();
             logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
+            InputStream input = srcSocket.getInputStream();
             if (srcSocket.isClosed()) {
                 logger.info(srcSocket.getRemoteSocketAddress() + " is closed");
                 return;
