@@ -46,8 +46,8 @@ public class SocketMiddleClient {
                                     logger.info(socketMiddleFoward.getMiddleServer() + " is closed");
                                     serverSocket = connectServer(socketMiddleFoward);
                                     fowardSocket.setMiddleServerSocket(serverSocket);
+                                    sendingData(fowardSocket, socketMiddleFoward, serverSocket);
                                 }
-                                sendingData(fowardSocket, socketMiddleFoward, serverSocket);
                             } catch (IOException e) {
                                 logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
                                 IOUtils.closeQuietly(serverSocket);
