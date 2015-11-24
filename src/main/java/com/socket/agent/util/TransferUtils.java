@@ -3,6 +3,7 @@ package com.socket.agent.util;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -80,7 +81,7 @@ public class TransferUtils {
                 transferMap.put(srcSocket, srcTask);
             }
         }
-        for (Socket srcSocket : socketMap.keySet()) {
+        for (Socket srcSocket : new HashSet<Socket>(socketMap.keySet())) {
             Set<ToScoket> toSet = socketMap.get(srcSocket);
             for (ToScoket toScoket : toSet) {
                 // 目标socket任务

@@ -24,6 +24,8 @@ import com.socket.agent.util.TransferUtils;
 public class SocketMiddleClient {
     private final static Logger logger = LoggerFactory.getLogger(SocketMiddleClient.class);
     private List<SocketMiddleFoward> middles = new ArrayList<SocketMiddleFoward>();
+    private int clientSoTimeout;
+    private int serverSoTimeout;
 
     public synchronized void start() {
         for (final SocketMiddleFoward socketMiddleFoward : middles) {
@@ -74,7 +76,9 @@ public class SocketMiddleClient {
                         logger.info("connecting to forward to " + socketMiddleFoward.getForwardTo());
                         forwardToSocket.connect(new InetSocketAddress(socketMiddleFoward.getForwardTo().split(":")[0], Integer.parseInt(socketMiddleFoward.getForwardTo().split(":")[1])), 5000);
                         logger.info("connected to forward to " + forwardToSocket.getRemoteSocketAddress());
-                        forwardToSocket.setSoTimeout(60000);
+                        if (clientSoTimeout > 0) {
+                            forwardToSocket.setSoTimeout(clientSoTimeout);
+                        }
                         return forwardToSocket;
                     }
                 }).start();
@@ -89,7 +93,9 @@ public class SocketMiddleClient {
     private Socket connectServer(final SocketMiddleFoward socketMiddleFoward) throws SocketException, IOException {
         Socket serverSocket;
         serverSocket = new Socket();
-        serverSocket.setSoTimeout(1800 * 1000);
+        if (serverSoTimeout > 0) {
+            serverSocket.setSoTimeout(serverSoTimeout);
+        }
         logger.info("connecting to middle server " + socketMiddleFoward.getMiddleServer());
         serverSocket.connect(new InetSocketAddress(socketMiddleFoward.getMiddleServer().split(":")[0], Integer.parseInt(socketMiddleFoward.getMiddleServer().split(":")[1])), 5000);
         logger.info("connected to middle server " + serverSocket.getRemoteSocketAddress());
@@ -102,5 +108,21 @@ public class SocketMiddleClient {
 
     public void setMiddles(List<SocketMiddleFoward> middles) {
         this.middles = middles;
+    }
+
+    public int getClientSoTimeout() {
+        return clientSoTimeout;
+    }
+
+    public void setClientSoTimeout(int clientSoTimeout) {
+        this.clientSoTimeout = clientSoTimeout;
+    }
+
+    public int getServerSoTimeout() {
+        return serverSoTimeout;
+    }
+
+    public void setServerSoTimeout(int serverSoTimeout) {
+        this.serverSoTimeout = serverSoTimeout;
     }
 }

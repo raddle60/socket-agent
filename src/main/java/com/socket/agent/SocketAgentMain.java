@@ -58,6 +58,8 @@ public class SocketAgentMain {
                     String[] split2 = string.split("\\-");
                     client.getMiddles().add(new SocketMiddleFoward(split2[0], split2[1]));
                 }
+                client.setClientSoTimeout(60 * 1000);
+                client.setServerSoTimeout(1800 * 1000);
                 client.start();
             }
         } catch (Exception e) {
