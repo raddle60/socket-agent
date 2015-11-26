@@ -102,4 +102,45 @@ public class TransferUtils {
             }
         }
     }
+
+    public static boolean isDiscardData(Socket fromSocket, Socket toSocket) {
+        Set<ToScoket> srcSet = socketMap.get(toSocket);
+        // 只转发到一个socket，不需要丢弃
+        if (srcSet.size() == 1) {
+            return false;
+        }
+        ToScoket primarySocket = getPrimarySocket(srcSet);
+        if (primarySocket == null) {
+            return false;
+        }
+        return !fromSocket.equals(primarySocket.getSocket());
+    }
+
+    private static ToScoket getPrimarySocket(Set<ToScoket> toSockets) {
+        // 去除已关闭的
+        for (Iterator<ToScoket> iterator = toSockets.iterator(); iterator.hasNext();) {
+            ToScoket toScoket = iterator.next();
+            if (toScoket.getSocket().isClosed()) {
+                iterator.remove();
+            }
+        }
+        boolean hasPrimary = false;
+        for (ToScoket socketCopySocket : toSockets) {
+            if (socketCopySocket.isPrimary()) {
+                hasPrimary = true;
+            }
+        }
+        for (ToScoket socketCopySocket2 : toSockets) {
+            if (hasPrimary) {
+                if (socketCopySocket2.isPrimary()) {
+                    return socketCopySocket2;
+                }
+            } else {
+                if (!socketCopySocket2.getSocket().isClosed()) {
+                    return socketCopySocket2;
+                }
+            }
+        }
+        return null;
+    }
 }
