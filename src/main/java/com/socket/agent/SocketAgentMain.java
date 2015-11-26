@@ -2,13 +2,17 @@ package com.socket.agent;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.socket.agent.copy.SocketCopyServer;
 import com.socket.agent.middle.SocketMiddleClient;
 import com.socket.agent.middle.SocketMiddleServer;
+import com.socket.agent.model.SocketCopy;
 import com.socket.agent.model.SocketMiddle;
 import com.socket.agent.model.SocketMiddleFoward;
 
@@ -66,5 +70,27 @@ public class SocketAgentMain {
         } catch (Exception e) {
             logger.error("SocketMiddleClient start failed " + e.getMessage(), e);
         }
+        try {
+            String socketCopys = properties.getProperty("socketCopys");
+            if (socketCopys != null) {
+                SocketCopyServer copyServer = new SocketCopyServer();
+                String[] split = socketCopys.split("\\|");
+                for (String string : split) {
+                    String[] split2 = string.split("\\-");
+                    int port = Integer.parseInt(split2[0]);
+                    copyServer.setLocalPort(port);
+                    String[] toaddrs = split2[1].split(",");
+                    List<SocketCopy> list = new ArrayList<SocketCopy>();
+                    for (String string2 : toaddrs) {
+                        list.add(new SocketCopy(string2));
+                    }
+                    copyServer.setCopyTo(list);
+                }
+                copyServer.start();
+            }
+        } catch (Exception e) {
+            logger.error("SocketCopyServer start failed " + e.getMessage(), e);
+        }
+
     }
 }

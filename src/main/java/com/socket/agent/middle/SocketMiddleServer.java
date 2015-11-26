@@ -50,7 +50,7 @@ public class SocketMiddleServer {
                             }
                         }
                     }
-                }).start();
+                }, "SocketMiddleServer-" + server1.getLocalPort()).start();
                 final ServerSocket server2 = new ServerSocket(socketMiddle.getListenPort2());
                 sockets.setServer2(server2);
                 new Thread(new Runnable() {
@@ -71,7 +71,7 @@ public class SocketMiddleServer {
                             }
                         }
                     }
-                }).start();
+                }, "SocketMiddleServer-" + server2.getLocalPort()).start();
                 servers.add(sockets);
             } catch (IOException e) {
                 logger.error("starting SocketMiddleServer failed , " + socketMiddle.getListenPort1() + "<->" + socketMiddle.getListenPort2(), e);

@@ -51,7 +51,7 @@ public class TransferUtils {
                     logger.info("current socket count :" + socketMap.size() + " ,transfer count :" + transferMap.size());
                 }
             }
-        }).start();
+        }, "TransferUtils-clean").start();
     }
 
     public static void addSocket(Socket fromSocket, SocketCopySocket toSocket) {
@@ -77,7 +77,7 @@ public class TransferUtils {
             if (!transferMap.containsKey(srcSocket) && !srcSocket.isClosed()) {
                 // 源socket任务
                 SocketTranferTask srcTask = new SocketTranferTask(srcSocket, socketMap.get(srcSocket));
-                new Thread(srcTask).start();
+                new Thread(srcTask, "TransferUtils-" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort()).start();
                 transferMap.put(srcSocket, srcTask);
             }
         }
@@ -96,7 +96,7 @@ public class TransferUtils {
                         toSrcSet.add(o);
                     }
                     SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), toSrcSet);
-                    new Thread(task2).start();
+                    new Thread(task2, "TransferUtils-" + toScoket.getSocket().getRemoteSocketAddress() + ">" + toScoket.getSocket().getLocalPort()).start();
                     transferMap.put(toScoket.getSocket(), task2);
                 }
             }

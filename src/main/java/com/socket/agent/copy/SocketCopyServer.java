@@ -20,46 +20,85 @@ import com.socket.agent.util.TransferUtils;
 public class SocketCopyServer {
     private int localPort;
     private List<SocketCopy> copyTo = new ArrayList<SocketCopy>();
+    private int sourceTimeout;
+    private int forwardTimeout;
 
     private final static Logger logger = LoggerFactory.getLogger(SocketCopyServer.class);
 
     public synchronized void start() {
-        try {
-            ServerSocket server = new ServerSocket(localPort);
-            while (true) {
-                logger.error("listening on " + localPort);
-                final Socket socket = server.accept();
-                socket.setSoTimeout(60000);
-                new Thread(new Runnable() {
+        new Thread(new Runnable() {
 
-                    public void run() {
-                        List<SocketCopySocket> toSockets = new ArrayList<SocketCopySocket>();
-                        for (SocketCopy socketCopy : copyTo) {
-                            try {
-                                Socket copyToSocket = connect(socketCopy.getCopyTo());
-                                toSockets.add(new SocketCopySocket(socketCopy.isPrimary(), copyToSocket));
-                            } catch (IOException e) {
-                                logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
-                                continue;
+            public void run() {
+                try {
+                    ServerSocket server = new ServerSocket(localPort);
+                    while (true) {
+                        logger.info("accepting on " + localPort);
+                        final Socket socket = server.accept();
+                        socket.setSoTimeout(sourceTimeout);
+                        new Thread(new Runnable() {
+
+                            public void run() {
+                                List<SocketCopySocket> toSockets = new ArrayList<SocketCopySocket>();
+                                for (SocketCopy socketCopy : copyTo) {
+                                    try {
+                                        Socket copyToSocket = connect(socketCopy.getCopyTo());
+                                        toSockets.add(new SocketCopySocket(socketCopy.isPrimary(), copyToSocket));
+                                    } catch (IOException e) {
+                                        logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
+                                        continue;
+                                    }
+                                    TransferUtils.addSocket(socket, toSockets);
+                                }
                             }
-                            TransferUtils.addSocket(socket, toSockets);
-                        }
-                    }
 
-                    private Socket connect(String copyTo) throws IOException {
-                        Socket forwardToSocket;
-                        forwardToSocket = new Socket();
-                        logger.info("connecting to " + copyTo);
-                        forwardToSocket.connect(new InetSocketAddress(copyTo.split(":")[0], Integer.parseInt(copyTo.split(":")[1])), 5000);
-                        logger.info("connected to " + forwardToSocket.getRemoteSocketAddress());
-                        forwardToSocket.setSoTimeout(60000);
-                        return forwardToSocket;
+                            private Socket connect(String copyTo) throws IOException {
+                                Socket forwardToSocket;
+                                forwardToSocket = new Socket();
+                                logger.info("connecting to " + copyTo);
+                                forwardToSocket.connect(new InetSocketAddress(copyTo.split(":")[0], Integer.parseInt(copyTo.split(":")[1])), 5000);
+                                logger.info("connected to " + forwardToSocket.getRemoteSocketAddress());
+                                forwardToSocket.setSoTimeout(forwardTimeout);
+                                return forwardToSocket;
+                            }
+                        }, "SocketCopyServer-connect").start();
                     }
-                }).start();
+                } catch (IOException e) {
+                    logger.error("listen on " + localPort + " failed", e);
+                }
             }
-        } catch (IOException e) {
-            logger.error("listen on " + localPort + " failed", e);
-        }
+        }, "SocketCopyServer-" + localPort).start();
+    }
+
+    public int getLocalPort() {
+        return localPort;
+    }
+
+    public void setLocalPort(int localPort) {
+        this.localPort = localPort;
+    }
+
+    public List<SocketCopy> getCopyTo() {
+        return copyTo;
+    }
+
+    public void setCopyTo(List<SocketCopy> copyTo) {
+        this.copyTo = copyTo;
+    }
+
+    public int getSourceTimeout() {
+        return sourceTimeout;
+    }
+
+    public void setSourceTimeout(int sourceTimeout) {
+        this.sourceTimeout = sourceTimeout;
+    }
+
+    public int getForwardTimeout() {
+        return forwardTimeout;
+    }
+
+    public void setForwardTimeout(int forwardTimeout) {
+        this.forwardTimeout = forwardTimeout;
     }
 
 }

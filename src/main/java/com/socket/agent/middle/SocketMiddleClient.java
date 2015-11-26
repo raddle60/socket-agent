@@ -81,7 +81,7 @@ public class SocketMiddleClient {
                         }
                         return forwardToSocket;
                     }
-                }).start();
+                }, "SocketMiddleClient-loop").start();
             } catch (NumberFormatException e) {
                 logger.error("connect to middle server " + socketMiddleFoward.getMiddleServer() + " failed", e);
             }

@@ -62,7 +62,7 @@ public class SocketAgentServer {
                         }
                     }
                 }
-            });
+            }, "SocketAgentServer-" + properties.getProperty("local.port"));
             thread.start();
         }
     }
