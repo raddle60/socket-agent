@@ -47,8 +47,8 @@ public class SocketCopyServer {
                                         logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
                                         continue;
                                     }
-                                    TransferUtils.addSocket(socket, toSockets);
                                 }
+                                TransferUtils.addSocket(socket, toSockets);
                             }
 
                             private Socket connect(String copyTo) throws IOException {
