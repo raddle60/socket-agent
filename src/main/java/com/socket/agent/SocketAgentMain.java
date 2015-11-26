@@ -60,7 +60,7 @@ public class SocketAgentMain {
                     client.getMiddles().add(new SocketMiddleFoward(split2[0], split2[1]));
                 }
                 client.setClientSoTimeout(Integer.parseInt(properties.getProperty("middleClient.forward.so.timeout", "60000")));
-                client.setServerSoTimeout(Integer.parseInt(properties.getProperty("middleClient.server.timeout", "1800000")));
+                client.setServerSoTimeout(Integer.parseInt(properties.getProperty("middleClient.server.so.timeout", "1800000")));
                 client.start();
             }
         } catch (Exception e) {
