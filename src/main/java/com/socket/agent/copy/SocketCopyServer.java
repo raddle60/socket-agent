@@ -64,6 +64,8 @@ public class SocketCopyServer {
                     }
                 } catch (IOException e) {
                     logger.error("listen on " + localPort + " failed", e);
+                } catch (Throwable e) {
+                    logger.error("unknown error " + localPort + ", " + e.getMessage(), e);
                 }
             }
         }, "SocketCopyServer-" + localPort).start();
