@@ -76,11 +76,11 @@ public class SocketTranferTask implements Runnable {
             IOUtils.closeQuietly(srcSocket);
         } catch (SocketTimeoutException e) {
             logger.info("close socket , time out from " + srcSocket.getRemoteSocketAddress());
-            logger.info("end SocketTranferTask +" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
+            logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
         } catch (IOException e) {
             logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
-            logger.info("end SocketTranferTask +" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
+            logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
         }
     }
