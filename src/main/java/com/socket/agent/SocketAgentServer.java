@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.socket.agent.model.SocketCopySocket;
+import com.socket.agent.util.SocketCallback;
 import com.socket.agent.util.TransferUtils;
 
 /**
@@ -44,18 +45,28 @@ public class SocketAgentServer {
                         logger.error("starting socket agent failed", e);
                         return;
                     }
-                    Socket socket = null;
                     while (true) {
                         try {
-                            socket = server.accept();
-                            socket.setSoTimeout(Integer.parseInt(properties.getProperty("so.timeout", "60000")));
-                            logger.info("accepted socket :" + socket.getRemoteSocketAddress());
-                            try {
-                                Socket forwardToSocket = connectForward();
-                                TransferUtils.addSocket(socket, null, new SocketCopySocket(true, forwardToSocket));
-                            } catch (IOException e) {
-                                logger.error("connect to forward " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed , " + e.getMessage());
-                            }
+                            final Socket srcSocket = server.accept();
+                            srcSocket.setSoTimeout(Integer.parseInt(properties.getProperty("so.timeout", "60000")));
+                            logger.info("accepted socket :" + srcSocket.getRemoteSocketAddress());
+                            TransferUtils.addSocket(srcSocket, new SocketCallback() {
+
+                                public void dataReceived(Socket socket, byte[] data) {
+                                    if (!socket.equals(srcSocket)) {
+                                        // 不是源socket
+                                        return;
+                                    }
+                                    if (TransferUtils.isToAddrClosed(srcSocket, properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port"))) {
+                                        try {
+                                            Socket forwardToSocket = connectForward();
+                                            TransferUtils.addSocket(socket, this, new SocketCopySocket(true, forwardToSocket));
+                                        } catch (IOException e) {
+                                            logger.error("connect to " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed , " + e.getMessage());
+                                        }
+                                    }
+                                }
+                            }, (SocketCopySocket) null);
                         } catch (IOException e) {
                             logger.error("accept socket failed", e);
                             return;

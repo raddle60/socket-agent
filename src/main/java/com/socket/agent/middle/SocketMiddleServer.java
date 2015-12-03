@@ -31,13 +31,14 @@ public class SocketMiddleServer {
             try {
                 final SocketMiddleSockets sockets = new SocketMiddleSockets();
                 final ServerSocket server1 = new ServerSocket(socketMiddle.getListenPort1());
+                logger.info("listening on " + socketMiddle.getListenPort1());
                 sockets.setServer1(server1);
                 new Thread(new Runnable() {
                     public void run() {
                         while (true) {
                             try {
-                                logger.info("accepting on :" + server1.getLocalPort());
                                 final Socket socket = server1.accept();
+                                logger.info("accepted " + socket);
                                 if (soTimeout > 0) {
                                     socket.setSoTimeout(soTimeout);
                                 }
@@ -52,13 +53,14 @@ public class SocketMiddleServer {
                     }
                 }, "SocketMiddleServer-" + server1.getLocalPort()).start();
                 final ServerSocket server2 = new ServerSocket(socketMiddle.getListenPort2());
+                logger.info("listening on " + socketMiddle.getListenPort2());
                 sockets.setServer2(server2);
                 new Thread(new Runnable() {
                     public void run() {
                         while (true) {
                             try {
-                                logger.info("accepting on :" + server2.getLocalPort());
                                 final Socket socket = server2.accept();
+                                logger.info("accepted " + socket);
                                 if (soTimeout > 0) {
                                     socket.setSoTimeout(soTimeout);
                                 }
