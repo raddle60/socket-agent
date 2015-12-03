@@ -27,7 +27,7 @@ public class SocketTranferTask implements Runnable {
 
     public void run() {
         try {
-            logger.info("start SocketTranferTask +" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
+            logger.info("start SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             byte[] buffer = new byte[1024 * 32];
             logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
             InputStream input = srcSocket.getInputStream();
