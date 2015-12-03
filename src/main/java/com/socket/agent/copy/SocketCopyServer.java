@@ -32,9 +32,10 @@ public class SocketCopyServer {
             public void run() {
                 try {
                     ServerSocket server = new ServerSocket(localPort);
+                    logger.info("listening on " + localPort);
                     while (true) {
-                        logger.info("accepting on " + localPort);
                         final Socket srcSocket = server.accept();
+                        logger.info("accepted " + srcSocket);
                         srcSocket.setSoTimeout(sourceTimeout);
                         new Thread(new Runnable() {
 
