@@ -52,7 +52,7 @@ public class SocketAgentServer {
                             logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                             try {
                                 Socket forwardToSocket = connectForward();
-                                TransferUtils.addSocket(socket, new SocketCopySocket(true, forwardToSocket));
+                                TransferUtils.addSocket(socket, null, new SocketCopySocket(true, forwardToSocket));
                             } catch (IOException e) {
                                 logger.error("connect to forward " + properties.getProperty("dest.ip") + ":" + properties.getProperty("dest.port") + " failed , " + e.getMessage());
                             }

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.socket.agent.model.SocketCopy;
 import com.socket.agent.model.SocketCopySocket;
+import com.socket.agent.util.SocketCallback;
 import com.socket.agent.util.TransferUtils;
 
 /**
@@ -33,22 +34,34 @@ public class SocketCopyServer {
                     ServerSocket server = new ServerSocket(localPort);
                     while (true) {
                         logger.info("accepting on " + localPort);
-                        final Socket socket = server.accept();
-                        socket.setSoTimeout(sourceTimeout);
+                        final Socket srcSocket = server.accept();
+                        srcSocket.setSoTimeout(sourceTimeout);
                         new Thread(new Runnable() {
 
                             public void run() {
-                                List<SocketCopySocket> toSockets = new ArrayList<SocketCopySocket>();
-                                for (SocketCopy socketCopy : copyTo) {
-                                    try {
-                                        Socket copyToSocket = connect(socketCopy.getCopyTo());
-                                        toSockets.add(new SocketCopySocket(socketCopy.isPrimary(), copyToSocket));
-                                    } catch (IOException e) {
-                                        logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
-                                        continue;
+                                TransferUtils.addSocket(srcSocket, new SocketCallback() {
+
+                                    public void dataReceived(Socket socket, byte[] data) {
+                                        if (!socket.equals(srcSocket)) {
+                                            // 不是源socket
+                                            return;
+                                        }
+                                        List<SocketCopySocket> toSockets = new ArrayList<SocketCopySocket>();
+                                        for (SocketCopy socketCopy : copyTo) {
+                                            if (TransferUtils.isToAddrClosed(srcSocket, socketCopy.getCopyTo())) {
+                                                try {
+                                                    Socket copyToSocket = connect(socketCopy.getCopyTo());
+                                                    toSockets.add(new SocketCopySocket(socketCopy.isPrimary(), copyToSocket));
+                                                } catch (IOException e) {
+                                                    logger.error("connect to " + socketCopy.getCopyTo() + " failed , " + e.getMessage());
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        // 放入接收端的socket
+                                        TransferUtils.addSocket(srcSocket, this, toSockets);
                                     }
-                                }
-                                TransferUtils.addSocket(socket, toSockets);
+                                }, (SocketCopySocket) null);
                             }
 
                             private Socket connect(String copyTo) throws IOException {

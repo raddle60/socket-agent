@@ -63,7 +63,7 @@ public class SocketMiddleClient {
                             if (fowardSocket.getForwardToSocket() == null || fowardSocket.getForwardToSocket().isClosed() || serverChanged) {
                                 Socket forwardToSocket = connectForward(socketMiddleFoward);
                                 fowardSocket.setForwardToSocket(forwardToSocket);
-                                TransferUtils.addSocket(serverSocket, new SocketCopySocket(true, forwardToSocket));
+                                TransferUtils.addSocket(serverSocket, null, new SocketCopySocket(true, forwardToSocket));
                             }
                         } catch (IOException e) {
                             logger.error("connect to forward " + socketMiddleFoward.getForwardTo() + " failed , " + e.getMessage());

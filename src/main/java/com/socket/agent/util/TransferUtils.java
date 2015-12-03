@@ -1,5 +1,6 @@
 package com.socket.agent.util;
 
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,29 +55,49 @@ public class TransferUtils {
         }, "TransferUtils-clean").start();
     }
 
-    public static void addSocket(Socket fromSocket, SocketCopySocket toSocket) {
+    public static void addSocket(Socket fromSocket, SocketCallback callback, SocketCopySocket toSocket) {
         List<SocketCopySocket> ss = new ArrayList<SocketCopySocket>();
-        ss.add(toSocket);
-        addSocket(fromSocket, ss);
+        if (toSocket != null) {
+            ss.add(toSocket);
+        }
+        addSocket(fromSocket, callback, ss);
     }
 
-    public static synchronized void addSocket(Socket fromSocket, List<SocketCopySocket> toSockets) {
+    public static synchronized void addSocket(Socket fromSocket, SocketCallback callback, List<SocketCopySocket> toSockets) {
         Set<ToScoket> srcSet = socketMap.get(fromSocket);
         if (srcSet == null) {
             srcSet = new LinkedHashSet<ToScoket>();
             socketMap.put(fromSocket, srcSet);
         }
-        for (SocketCopySocket toScoket : toSockets) {
-            srcSet.add(new ToScoket(toScoket.getToSocket(), toScoket.isPrimary()));
+        if (toSockets != null) {
+            for (SocketCopySocket toScoket : toSockets) {
+                srcSet.add(new ToScoket(toScoket.getToSocket(), toScoket.isPrimary()));
+            }
         }
-        startTask();
+        startTask(callback);
     }
 
-    private static synchronized void startTask() {
+    /**
+     * 判断到toAddr的连接是否关闭
+     * @param fromSocket
+     * @param toAddr
+     * @return
+     */
+    public static boolean isToAddrClosed(Socket fromSocket, String toAddr) {
+        InetSocketAddress toSocketAddr = new InetSocketAddress(toAddr.split(":")[0], Integer.parseInt(toAddr.split(":")[1]));
+        for (ToScoket toScoket : socketMap.get(fromSocket)) {
+            if (!toScoket.getSocket().isClosed() && toScoket.getSocket().getRemoteSocketAddress().equals(toSocketAddr)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static synchronized void startTask(SocketCallback callback) {
         for (Socket srcSocket : socketMap.keySet()) {
             if (!transferMap.containsKey(srcSocket) && !srcSocket.isClosed()) {
                 // 源socket任务
-                SocketTranferTask srcTask = new SocketTranferTask(srcSocket, socketMap.get(srcSocket));
+                SocketTranferTask srcTask = new SocketTranferTask(srcSocket, callback, socketMap.get(srcSocket));
                 new Thread(srcTask, "TransferUtils-" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort()).start();
                 transferMap.put(srcSocket, srcTask);
             }
@@ -95,7 +116,7 @@ public class TransferUtils {
                     if (!toSrcSet.contains(o)) {
                         toSrcSet.add(o);
                     }
-                    SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), toSrcSet);
+                    SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), callback, toSrcSet);
                     new Thread(task2, "TransferUtils-" + toScoket.getSocket().getRemoteSocketAddress() + ">" + toScoket.getSocket().getLocalPort()).start();
                     transferMap.put(toScoket.getSocket(), task2);
                 }

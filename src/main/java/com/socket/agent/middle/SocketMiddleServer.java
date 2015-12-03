@@ -43,7 +43,7 @@ public class SocketMiddleServer {
                                 }
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(new SocketCopySocket(false, socket));
-                                TransferUtils.addSocket(socket, sockets.getPort2Sockets());
+                                TransferUtils.addSocket(socket, null, sockets.getPort2Sockets());
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -64,7 +64,7 @@ public class SocketMiddleServer {
                                 }
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(new SocketCopySocket(false, socket));
-                                TransferUtils.addSocket(socket, sockets.getPort1Sockets());
+                                TransferUtils.addSocket(socket, null, sockets.getPort1Sockets());
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
