@@ -21,7 +21,7 @@ import com.socket.agent.model.SocketMiddleFoward;
  *
  */
 public class SocketAgentMain {
-    private final static Logger logger = LoggerFactory.getLogger(SocketAgentServer.class);
+    private final static Logger logger = LoggerFactory.getLogger(SocketAgentMain.class);
 
     public static void main(String[] args) {
         Properties properties = new Properties();
@@ -30,14 +30,6 @@ public class SocketAgentMain {
         } catch (Exception e) {
             logger.error("load " + new File("socket-agent.properties").getAbsolutePath() + " failed");
             return;
-        }
-        try {
-            if (properties.getProperty("local.port") != null) {
-                SocketAgentServer server = new SocketAgentServer(properties);
-                server.start();
-            }
-        } catch (Exception e) {
-            logger.error("SocketAgentServer start failed " + e.getMessage(), e);
         }
         try {
             String middleServers = properties.getProperty("middleServers");
