@@ -31,6 +31,7 @@ public class SocketMiddleClient {
     public synchronized void start() {
         for (final SocketMiddleFoward socketMiddleFoward : middles) {
             final SocketMiddleFowardSocket fowardSocket = new SocketMiddleFowardSocket();
+            fowardSocket.setForwardTo(socketMiddleFoward.getForwardTo());
             new Thread(new Runnable() {
 
                 public void run() {
@@ -45,7 +46,7 @@ public class SocketMiddleClient {
                                     public void dataReceived(Socket socket, byte[] data) {
                                         if (socket.equals(fowardSocket.getMiddleServerSocket())) {
                                             // 从server端收到消息
-                                            if (TransferUtils.isToAddrClosed(socket, fowardSocket.getForwardTo())) {
+                                            if (TransferUtils.isToAddrClosed(socket, socketMiddleFoward.getForwardTo())) {
                                                 try {
                                                     Socket forwardToSocket = connectForward(socketMiddleFoward);
                                                     fowardSocket.setForwardToSocket(forwardToSocket);
