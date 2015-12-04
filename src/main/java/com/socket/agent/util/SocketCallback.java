@@ -7,6 +7,13 @@ import java.net.Socket;
  * @author Administrator
  * time : 2015年12月3日 上午11:29:51
  */
-public interface SocketCallback {
-    public void dataReceived(Socket socket, byte[] data);
+public abstract class SocketCallback {
+    public void dataReceived(Socket socket, byte[] data) {
+    };
+
+    public void dataSent(Socket srcSocket, Socket toSocket, byte[] data) {
+    };
+
+    public void socketClosed(Socket socket) {
+    };
 }

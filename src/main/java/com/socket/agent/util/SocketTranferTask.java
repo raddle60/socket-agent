@@ -42,8 +42,8 @@ public class SocketTranferTask implements Runnable {
                     return;
                 }
                 logger.info("received data from " + srcSocket.getRemoteSocketAddress() + " size : " + n);
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
                 if (n > 0) {
-                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
                     bo.write(buffer, 0, n);
                     logger.info("receive data to string :\n" + new String(bo.toByteArray(), "utf-8"));
                     if (callback != null) {
@@ -59,6 +59,9 @@ public class SocketTranferTask implements Runnable {
                                     logger.info("sending data to " + socket2.getSocket().getRemoteSocketAddress());
                                     socket2.getSocket().getOutputStream().write(buffer, 0, n);
                                     socket2.getSocket().getOutputStream().flush();
+                                    if (callback != null) {
+                                        callback.dataSent(srcSocket, socket2.getSocket(), bo.toByteArray());
+                                    }
                                 } else {
                                     logger.info("discard data from " + srcSocket.getRemoteSocketAddress() + " for " + socket2.getSocket().getRemoteSocketAddress());
                                 }
@@ -74,14 +77,23 @@ public class SocketTranferTask implements Runnable {
             logger.info("close socket , received -1 from " + srcSocket.getRemoteSocketAddress());
             logger.info("end SocketTranferTask +" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
+            if (callback != null) {
+                callback.socketClosed(srcSocket);
+            }
         } catch (SocketTimeoutException e) {
             logger.info("close socket , time out from " + srcSocket.getRemoteSocketAddress());
             logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
+            if (callback != null) {
+                callback.socketClosed(srcSocket);
+            }
         } catch (IOException e) {
             logger.error("read data from " + srcSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
             logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
+            if (callback != null) {
+                callback.socketClosed(srcSocket);
+            }
         }
     }
 

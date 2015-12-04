@@ -79,6 +79,7 @@ public class SocketAgentMain {
                     copyServer.setCopyTo(list);
                     copyServer.setSourceTimeout(Integer.parseInt(properties.getProperty("socketCopys.source.so.timeout", "60000")));
                     copyServer.setForwardTimeout(Integer.parseInt(properties.getProperty("socketCopys.forward.so.timeout", "60000")));
+                    copyServer.setShortConnect(Boolean.parseBoolean(properties.getProperty("socketCopys.shortConnect", "false")));
                 }
                 copyServer.start();
             }

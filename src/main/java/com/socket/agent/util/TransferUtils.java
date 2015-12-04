@@ -37,18 +37,7 @@ public class TransferUtils {
                     } catch (InterruptedException e) {
                         return;
                     }
-                    for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
-                        Socket key = iterator.next();
-                        if (key.isClosed()) {
-                            iterator.remove();
-                        }
-                    }
-                    for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
-                        Socket key = iterator.next();
-                        if (key.isClosed()) {
-                            iterator.remove();
-                        }
-                    }
+                    cleanClosedSocket();
                     logger.info("current socket count :" + socketMap.size() + " ,transfer count :" + transferMap.size());
                 }
             }
@@ -91,6 +80,17 @@ public class TransferUtils {
             }
         }
         return true;
+    }
+
+    public static boolean isAllToSocketClosed(Socket fromSocket) {
+        boolean allClosed = true;
+        for (ToScoket toScoket : socketMap.get(fromSocket)) {
+            if (!toScoket.getSocket().isClosed()) {
+                allClosed = false;
+                break;
+            }
+        }
+        return allClosed;
     }
 
     private static synchronized void startTask(SocketCallback callback) {
@@ -163,5 +163,20 @@ public class TransferUtils {
             }
         }
         return null;
+    }
+
+    private static void cleanClosedSocket() {
+        for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
+            Socket key = iterator.next();
+            if (key.isClosed()) {
+                iterator.remove();
+            }
+        }
+        for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
+            Socket key = iterator.next();
+            if (key.isClosed()) {
+                iterator.remove();
+            }
+        }
     }
 }

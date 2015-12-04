@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +24,10 @@ public class SocketCopyServer {
     private List<SocketCopy> copyTo = new ArrayList<SocketCopy>();
     private int sourceTimeout;
     private int forwardTimeout;
+    /**
+     * 短连接
+     */
+    private boolean shortConnect;
 
     private final static Logger logger = LoggerFactory.getLogger(SocketCopyServer.class);
 
@@ -42,6 +47,7 @@ public class SocketCopyServer {
                             public void run() {
                                 TransferUtils.addSocket(srcSocket, new SocketCallback() {
 
+                                    @Override
                                     public void dataReceived(Socket socket, byte[] data) {
                                         if (!socket.equals(srcSocket)) {
                                             // 不是源socket
@@ -61,6 +67,19 @@ public class SocketCopyServer {
                                         }
                                         // 放入接收端的socket
                                         TransferUtils.addSocket(srcSocket, this, toSockets);
+                                    }
+
+                                    @Override
+                                    public void socketClosed(Socket socket) {
+                                        if (socket.equals(srcSocket)) {
+                                            // 源socket
+                                            return;
+                                        }
+                                        // 看接收端是否全部关闭了
+                                        if (TransferUtils.isAllToSocketClosed(srcSocket) && shortConnect) {
+                                            logger.info("close socket , all receive socket from " + srcSocket.getRemoteSocketAddress() + " is closed");
+                                            IOUtils.closeQuietly(srcSocket);
+                                        }
                                     }
                                 }, (SocketCopySocket) null);
                             }
@@ -115,6 +134,14 @@ public class SocketCopyServer {
 
     public void setForwardTimeout(int forwardTimeout) {
         this.forwardTimeout = forwardTimeout;
+    }
+
+    public boolean isShortConnect() {
+        return shortConnect;
+    }
+
+    public void setShortConnect(boolean shortConnect) {
+        this.shortConnect = shortConnect;
     }
 
 }
