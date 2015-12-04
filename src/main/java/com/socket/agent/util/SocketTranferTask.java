@@ -63,7 +63,7 @@ public class SocketTranferTask implements Runnable {
                                     logger.info("discard data from " + srcSocket.getRemoteSocketAddress() + " for " + socket2.getSocket().getRemoteSocketAddress());
                                 }
                             } catch (IOException e) {
-                                logger.info(socket2.getSocket().getRemoteSocketAddress() + " error : " + e.getMessage());
+                                logger.info("sending data to " + socket2.getSocket().getRemoteSocketAddress() + " error : " + e.getMessage());
                                 IOUtils.closeQuietly(socket2.getSocket());
                             }
                         }
@@ -79,7 +79,7 @@ public class SocketTranferTask implements Runnable {
             logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
         } catch (IOException e) {
-            logger.error("transfer data from " + srcSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
+            logger.error("read data from " + srcSocket.getRemoteSocketAddress() + " failed , " + e.getMessage());
             logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
         }
