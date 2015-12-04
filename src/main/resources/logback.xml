@@ -4,7 +4,7 @@
 
 <configuration>
 
-	<property name="pattern" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{30} - %msg%n" />
+	<property name="pattern" value="%d [%thread] %-5level %logger{30} - %msg%n" />
 
 	<appender name="rollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<!-- 下面这段注释的代码可以在日志文件超过 5MB 时进行归档，并且归档文件后缀只要是 .zip 或 .gz 就会自动压缩日志归档 -->
