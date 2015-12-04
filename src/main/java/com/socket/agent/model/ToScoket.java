@@ -53,4 +53,9 @@ public class ToScoket {
         return socket.equals(other.socket);
     }
 
+    @Override
+    public String toString() {
+        return "ToScoket [socket=" + socket + ", isPrimary=" + isPrimary + "]";
+    }
+
 }

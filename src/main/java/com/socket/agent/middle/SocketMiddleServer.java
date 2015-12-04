@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.socket.agent.model.SocketCopySocket;
 import com.socket.agent.model.SocketMiddle;
 import com.socket.agent.model.SocketMiddleSockets;
+import com.socket.agent.util.SocketCallback;
 import com.socket.agent.util.TransferUtils;
 
 /**
@@ -25,6 +26,10 @@ public class SocketMiddleServer {
     private List<SocketMiddle> middles = new ArrayList<SocketMiddle>();
     private List<SocketMiddleSockets> servers = new ArrayList<SocketMiddleSockets>();
     private int soTimeout;
+    /**
+     * 短连接
+     */
+    private boolean shortConnect;
 
     public synchronized void start() {
         for (SocketMiddle socketMiddle : middles) {
@@ -66,7 +71,18 @@ public class SocketMiddleServer {
                                 }
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort2Sockets().add(new SocketCopySocket(false, socket));
-                                TransferUtils.addSocket(socket, null, sockets.getPort1Sockets());
+                                TransferUtils.addSocket(socket, new SocketCallback() {
+
+                                    @Override
+                                    public void dataSent(Socket srcSocket, Socket toSocket, byte[] data) {
+                                        if (socket.equals(srcSocket)) {
+                                            if (shortConnect) {
+                                                IOUtils.closeQuietly(toSocket);
+                                                logger.info("close socket " + toSocket.getRemoteSocketAddress() + " , data has sent");
+                                            }
+                                        }
+                                    }
+                                }, sockets.getPort1Sockets());
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -109,5 +125,13 @@ public class SocketMiddleServer {
 
     public void setSoTimeout(int soTimeout) {
         this.soTimeout = soTimeout;
+    }
+
+    public boolean isShortConnect() {
+        return shortConnect;
+    }
+
+    public void setShortConnect(boolean shortConnect) {
+        this.shortConnect = shortConnect;
     }
 }

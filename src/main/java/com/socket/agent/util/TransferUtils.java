@@ -4,7 +4,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,7 +59,18 @@ public class TransferUtils {
         }
         if (toSockets != null) {
             for (SocketCopySocket toScoket : toSockets) {
+                // 将目标加到源中
                 srcSet.add(new ToScoket(toScoket.getToSocket(), toScoket.isPrimary()));
+                // 将源加到目标中
+                Set<ToScoket> toSrcSet = socketMap.get(toScoket.getToSocket());
+                if (toSrcSet == null) {
+                    toSrcSet = new LinkedHashSet<ToScoket>();
+                    socketMap.put(toScoket.getToSocket(), toSrcSet);
+                }
+                ToScoket o = new ToScoket(fromSocket, false);
+                if (!toSrcSet.contains(o)) {
+                    toSrcSet.add(o);
+                }
             }
         }
         startTask(callback);
@@ -102,21 +112,12 @@ public class TransferUtils {
                 transferMap.put(srcSocket, srcTask);
             }
         }
-        for (Socket srcSocket : new HashSet<Socket>(socketMap.keySet())) {
+        for (Socket srcSocket : socketMap.keySet()) {
             Set<ToScoket> toSet = socketMap.get(srcSocket);
             for (ToScoket toScoket : toSet) {
                 // 目标socket任务
                 if (!transferMap.containsKey(toScoket.getSocket()) && !toScoket.getSocket().isClosed()) {
-                    Set<ToScoket> toSrcSet = socketMap.get(toScoket.getSocket());
-                    if (toSrcSet == null) {
-                        toSrcSet = new LinkedHashSet<ToScoket>();
-                        socketMap.put(toScoket.getSocket(), toSrcSet);
-                    }
-                    ToScoket o = new ToScoket(srcSocket, false);
-                    if (!toSrcSet.contains(o)) {
-                        toSrcSet.add(o);
-                    }
-                    SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), callback, toSrcSet);
+                    SocketTranferTask task2 = new SocketTranferTask(toScoket.getSocket(), callback, socketMap.get(toScoket.getSocket()));
                     new Thread(task2, "TransferUtils-" + toScoket.getSocket().getRemoteSocketAddress() + ">" + toScoket.getSocket().getLocalPort()).start();
                     transferMap.put(toScoket.getSocket(), task2);
                 }
@@ -142,6 +143,7 @@ public class TransferUtils {
         for (Iterator<ToScoket> iterator = toSockets.iterator(); iterator.hasNext();) {
             ToScoket toScoket = iterator.next();
             if (toScoket.getSocket().isClosed()) {
+                logger.info("remove closed socket " + toScoket.getSocket());
                 iterator.remove();
             }
         }
@@ -169,12 +171,14 @@ public class TransferUtils {
         for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
             Socket key = iterator.next();
             if (key.isClosed()) {
+                logger.info("remove closed socket " + key);
                 iterator.remove();
             }
         }
         for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
             Socket key = iterator.next();
             if (key.isClosed()) {
+                logger.info("remove closed socket " + key);
                 iterator.remove();
             }
         }

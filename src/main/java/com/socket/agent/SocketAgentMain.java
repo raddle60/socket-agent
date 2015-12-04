@@ -41,6 +41,7 @@ public class SocketAgentMain {
                     middleServer.getMiddles().add(new SocketMiddle(Integer.parseInt(split2[0]), Integer.parseInt(split2[1])));
                 }
                 middleServer.setSoTimeout(Integer.parseInt(properties.getProperty("middleServer.so.timeout", "60000")));
+                middleServer.setShortConnect(Boolean.parseBoolean(properties.getProperty("middleServer.shortConnect", "false")));
                 middleServer.start();
             }
         } catch (Exception e) {
