@@ -12,7 +12,7 @@ public abstract class SocketCallback {
 	};
 
 	public boolean isDiscardData(Socket fromSocket, Socket toSocket, byte[] data) {
-		return TransferUtils.isDiscardData(fromSocket, toSocket);
+		return TransferUtils.isDiscardDataMultiFrom(fromSocket, toSocket);
 	}
 
 	public void dataSent(Socket srcSocket, Socket toSocket, byte[] data) {

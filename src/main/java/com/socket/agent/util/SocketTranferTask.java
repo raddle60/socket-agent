@@ -58,7 +58,7 @@ public class SocketTranferTask implements Runnable {
                             if (callback != null) {
                                 discardData = callback.isDiscardData(srcSocket, socket2.getSocket(), bo.toByteArray());
                             } else {
-                                discardData = TransferUtils.isDiscardData(srcSocket, socket2.getSocket());
+                                discardData = TransferUtils.isDiscardDataMultiFrom(srcSocket, socket2.getSocket());
                             }
                             try {
                                 if (!discardData) {

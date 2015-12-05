@@ -125,7 +125,13 @@ public class TransferUtils {
         }
     }
 
-    public static boolean isDiscardData(Socket fromSocket, Socket toSocket) {
+    /**
+     * 有多个fromSocket发给toSocket，只接收其中一个fromSocket的数据
+     * @param fromSocket
+     * @param toSocket
+     * @return
+     */
+    public static boolean isDiscardDataMultiFrom(Socket fromSocket, Socket toSocket) {
         Set<ToScoket> srcSet = socketMap.get(toSocket);
         // 只转发到一个socket，不需要丢弃
         if (srcSet.size() == 1) {
@@ -136,6 +142,25 @@ public class TransferUtils {
             return false;
         }
         return !fromSocket.equals(primarySocket.getSocket());
+    }
+    
+    /**
+     * 一个fromSocket发给多个toSocket，只发给其中一个toSocket
+     * @param fromSocket
+     * @param toSocket
+     * @return
+     */
+    public static boolean isDiscardDataMultiTo(Socket fromSocket, Socket toSocket) {
+        Set<ToScoket> srcSet = socketMap.get(fromSocket);
+        // 只转发到一个socket，不需要丢弃
+        if (srcSet.size() == 1) {
+            return false;
+        }
+        ToScoket primarySocket = getPrimarySocket(srcSet);
+        if (primarySocket == null) {
+            return false;
+        }
+        return !toSocket.equals(primarySocket.getSocket());
     }
 
     private static ToScoket getPrimarySocket(Set<ToScoket> toSockets) {

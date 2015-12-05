@@ -49,7 +49,19 @@ public class SocketMiddleServer {
                                 }
                                 logger.info("accepted socket :" + socket.getRemoteSocketAddress());
                                 sockets.getPort1Sockets().add(new SocketCopySocket(false, socket));
-                                TransferUtils.addSocket(socket, null, sockets.getPort2Sockets());
+                                TransferUtils.addSocket(socket, new SocketCallback() {
+
+                                    @Override
+                                    public boolean isDiscardData(Socket fromSocket, Socket toSocket, byte[] data) {
+                                        if (socket.equals(fromSocket)) {
+                                            // 往接收端全部发送
+                                            return false;
+                                        } else {
+                                            return super.isDiscardData(fromSocket, toSocket, data);
+                                        }
+                                    }
+                                    
+                                }, sockets.getPort2Sockets());
                             } catch (IOException e) {
                                 logger.error("accept socket failed", e);
                                 continue;
@@ -77,9 +89,20 @@ public class SocketMiddleServer {
                                     public void dataSent(Socket srcSocket, Socket toSocket, byte[] data) {
                                         if (socket.equals(srcSocket)) {
                                             if (shortConnect) {
+                                                // 短连接，将数据发送给发送端后，关闭发送端
                                                 IOUtils.closeQuietly(toSocket);
                                                 logger.info("close socket " + toSocket.getRemoteSocketAddress() + " , data has sent");
                                             }
+                                        }
+                                    }
+
+                                    @Override
+                                    public boolean isDiscardData(Socket fromSocket, Socket toSocket, byte[] data) {
+                                        if (socket.equals(fromSocket)) {
+                                            // 多个发送端，只将响应数据发给一个发送端
+                                            return TransferUtils.isDiscardDataMultiTo(fromSocket, toSocket);
+                                        } else {
+                                            return super.isDiscardData(fromSocket, toSocket, data);
                                         }
                                     }
                                 }, sockets.getPort1Sockets());
