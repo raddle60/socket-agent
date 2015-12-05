@@ -98,12 +98,14 @@ public class SocketMiddleServer {
 
                                     @Override
                                     public boolean isDiscardData(Socket fromSocket, Socket toSocket, byte[] data) {
-                                        if (socket.equals(fromSocket)) {
-                                            // 多个发送端，只将响应数据发给一个发送端
-                                            return TransferUtils.isDiscardDataMultiTo(fromSocket, toSocket);
-                                        } else {
-                                            return super.isDiscardData(fromSocket, toSocket, data);
+                                        boolean discardData = super.isDiscardData(fromSocket, toSocket, data);
+                                        if (!discardData) {
+                                            if (socket.equals(fromSocket)) {
+                                                // 多个发送端，只将响应数据发给一个发送端
+                                                return TransferUtils.isDiscardDataMultiTo(fromSocket, toSocket);
+                                            }
                                         }
+                                        return discardData;
                                     }
                                 }, sockets.getPort1Sockets());
                             } catch (IOException e) {
