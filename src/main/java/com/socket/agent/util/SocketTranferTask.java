@@ -54,8 +54,14 @@ public class SocketTranferTask implements Runnable {
                 for (ToScoket socket2 : toSockets) {
                     if (!socket2.getSocket().isClosed()) {
                         if (n > 0) {
+                            boolean discardData = false;
+                            if (callback != null) {
+                                discardData = callback.isDiscardData(srcSocket, socket2.getSocket(), bo.toByteArray());
+                            } else {
+                                discardData = TransferUtils.isDiscardData(srcSocket, socket2.getSocket());
+                            }
                             try {
-                                if (!TransferUtils.isDiscardData(srcSocket, socket2.getSocket())) {
+                                if (!discardData) {
                                     logger.info("sending data to " + socket2.getSocket().getRemoteSocketAddress());
                                     socket2.getSocket().getOutputStream().write(buffer, 0, n);
                                     socket2.getSocket().getOutputStream().flush();
