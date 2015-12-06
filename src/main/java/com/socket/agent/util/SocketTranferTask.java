@@ -81,7 +81,7 @@ public class SocketTranferTask implements Runnable {
                 logger.info("wating data from " + srcSocket.getRemoteSocketAddress());
             }
             logger.info("close socket , received -1 from " + srcSocket.getRemoteSocketAddress());
-            logger.info("end SocketTranferTask +" + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
+            logger.info("end SocketTranferTask " + srcSocket.getRemoteSocketAddress() + ">" + srcSocket.getLocalPort());
             IOUtils.closeQuietly(srcSocket);
             if (callback != null) {
                 callback.socketClosed(srcSocket);
