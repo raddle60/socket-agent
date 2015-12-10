@@ -193,19 +193,23 @@ public class TransferUtils {
     }
 
     private static void cleanClosedSocket() {
-        for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
-            Socket key = iterator.next();
-            if (key.isClosed()) {
-                logger.info("remove closed socket " + key);
-                iterator.remove();
+        try {
+            for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
+                Socket key = iterator.next();
+                if (key.isClosed()) {
+                    logger.info("remove closed socket " + key);
+                    iterator.remove();
+                }
             }
-        }
-        for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
-            Socket key = iterator.next();
-            if (key.isClosed()) {
-                logger.info("remove closed socket " + key);
-                iterator.remove();
+            for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
+                Socket key = iterator.next();
+                if (key.isClosed()) {
+                    logger.info("remove closed socket " + key);
+                    iterator.remove();
+                }
             }
+        } catch (Exception e) {
+            logger.info("remove closed socket exception ," + e.getMessage(), e);
         }
     }
 }
