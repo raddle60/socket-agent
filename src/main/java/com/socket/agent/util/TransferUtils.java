@@ -3,12 +3,12 @@ package com.socket.agent.util;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +23,8 @@ import com.socket.agent.model.ToScoket;
  */
 public class TransferUtils {
     private static final Logger logger = LoggerFactory.getLogger(TransferUtils.class);
-    private static Map<Socket, Set<ToScoket>> socketMap = new HashMap<Socket, Set<ToScoket>>();
-    private static Map<Socket, SocketTranferTask> transferMap = new HashMap<Socket, SocketTranferTask>();
+    private static Map<Socket, Set<ToScoket>> socketMap = new ConcurrentHashMap<Socket, Set<ToScoket>>();
+    private static Map<Socket, SocketTranferTask> transferMap = new ConcurrentHashMap<Socket, SocketTranferTask>();
 
     static {
         new Thread(new Runnable() {
@@ -33,11 +33,11 @@ public class TransferUtils {
                 while (true) {
                     try {
                         Thread.sleep(60000);
-                    } catch (InterruptedException e) {
-                        return;
+                        cleanClosedSocket();
+                        logger.info("current socket count :" + socketMap.size() + " ,transfer count :" + transferMap.size());
+                    } catch (Exception e) {
+                        logger.info("remove closed socket exception ," + e.getMessage(), e);
                     }
-                    cleanClosedSocket();
-                    logger.info("current socket count :" + socketMap.size() + " ,transfer count :" + transferMap.size());
                 }
             }
         }, "TransferUtils-clean").start();
@@ -193,23 +193,19 @@ public class TransferUtils {
     }
 
     private static void cleanClosedSocket() {
-        try {
-            for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
-                Socket key = iterator.next();
-                if (key.isClosed()) {
-                    logger.info("remove closed socket " + key);
-                    iterator.remove();
-                }
+        for (Iterator<Socket> iterator = socketMap.keySet().iterator(); iterator.hasNext();) {
+            Socket key = iterator.next();
+            if (key.isClosed()) {
+                logger.info("remove closed socket " + key);
+                iterator.remove();
             }
-            for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
-                Socket key = iterator.next();
-                if (key.isClosed()) {
-                    logger.info("remove closed socket " + key);
-                    iterator.remove();
-                }
+        }
+        for (Iterator<Socket> iterator = transferMap.keySet().iterator(); iterator.hasNext();) {
+            Socket key = iterator.next();
+            if (key.isClosed()) {
+                logger.info("remove closed socket " + key);
+                iterator.remove();
             }
-        } catch (Exception e) {
-            logger.info("remove closed socket exception ," + e.getMessage(), e);
         }
     }
 }
