@@ -30,6 +30,10 @@ public class SocketMiddleServer {
      * 短连接
      */
     private boolean shortConnect;
+    /**
+     * 短链接延迟关闭时间
+     */
+    private int shortConnectCloseDelayMillis;
 
     public synchronized void start() {
         for (SocketMiddle socketMiddle : middles) {
@@ -86,12 +90,24 @@ public class SocketMiddleServer {
                                 TransferUtils.addSocket(socket, new SocketCallback() {
 
                                     @Override
-                                    public void dataSent(Socket srcSocket, Socket toSocket, byte[] data) {
+                                    public void dataSent(Socket srcSocket, final Socket toSocket, byte[] data) {
                                         if (socket.equals(srcSocket)) {
+                                            logger.info("close socket " + toSocket.getRemoteSocketAddress() + " after " + shortConnectCloseDelayMillis + "ms");
                                             if (shortConnect) {
                                                 // 短连接，将数据发送给发送端后，关闭发送端
-                                                IOUtils.closeQuietly(toSocket);
-                                                logger.info("close socket " + toSocket.getRemoteSocketAddress() + " , data has sent");
+                                                new Thread(new Runnable() {
+
+                                                    public void run() {
+                                                        if (shortConnectCloseDelayMillis > 0) {
+                                                            try {
+                                                                Thread.sleep(shortConnectCloseDelayMillis);
+                                                            } catch (InterruptedException e) {
+                                                            }
+                                                        }
+                                                        IOUtils.closeQuietly(toSocket);
+                                                        logger.info("close socket " + toSocket.getRemoteSocketAddress() + " , data has sent");
+                                                    }
+                                                }, "delay-colse-" + toSocket.getRemoteSocketAddress() + ">" + toSocket.getLocalPort()).start();
                                             }
                                         }
                                     }
@@ -158,5 +174,13 @@ public class SocketMiddleServer {
 
     public void setShortConnect(boolean shortConnect) {
         this.shortConnect = shortConnect;
+    }
+
+    public int getShortConnectCloseDelayMillis() {
+        return shortConnectCloseDelayMillis;
+    }
+
+    public void setShortConnectCloseDelayMillis(int shortConnectCloseDelayMillis) {
+        this.shortConnectCloseDelayMillis = shortConnectCloseDelayMillis;
     }
 }
